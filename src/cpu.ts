@@ -41,22 +41,20 @@ class Cpu {
     this.r.f = 0;                 
     // Before we add, we need to check the half-carry bit
     // https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-    const halfByteSum = (this.r.a & 0xf) + (this.r['reg'] & 0xf);
+    const halfByteSum = (this.r.a & 0xf) + (this.r[reg] & 0xf);
     if ((halfByteSum & 0x10) == 0x10) {
       this.r.f |= 0x20;
     }
 
     // perform the addition
-    this.r.a += this.r['reg'];
-    
-    // TODO: Check for integer overflow here? if a > 255 => a-=255
+    this.r.a += this.r[reg];
     
     // Check for zero (ANDing with 255 will produce 0 iff i===0)
     // TODO: check if we can just say this.r.a===0?
     if (!(this.r.a & 255)) {
       this.r.f |= 0x80;
     }
-    // Check for zero
+    // Check for overflow
     if (this.r.a > 255) {
       this.r.f |= 0x10;
     }

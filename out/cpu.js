@@ -10,11 +10,11 @@ var Cpu = (function () {
                 return;
             }
             _this.r.f = 0;
-            var halfByteSum = (_this.r.a & 0xf) + (_this.r['reg'] & 0xf);
+            var halfByteSum = (_this.r.a & 0xf) + (_this.r[reg] & 0xf);
             if ((halfByteSum & 0x10) == 0x10) {
                 _this.r.f |= 0x20;
             }
-            _this.r.a += _this.r['reg'];
+            _this.r.a += _this.r[reg];
             if (!(_this.r.a & 255)) {
                 _this.r.f |= 0x80;
             }
