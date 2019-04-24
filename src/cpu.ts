@@ -156,4 +156,8 @@ class Cpu {
 
 
 const cpu = new Cpu();
-console.log(cpu);
+
+// If we're running under Node, export it for testing
+if(typeof module !== 'undefined' && module.exports) {
+  module.exports = cpu;
+}

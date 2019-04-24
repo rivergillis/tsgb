@@ -85,5 +85,7 @@ var Cpu = (function () {
     return Cpu;
 }());
 var cpu = new Cpu();
-console.log(cpu);
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = cpu;
+}
 //# sourceMappingURL=cpu.js.map
