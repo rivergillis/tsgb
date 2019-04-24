@@ -20,13 +20,25 @@ interface RegFile {
   [key: string]: any
 }
 
+/* I think:
+PC should increas by 4 for each instr (maybe not all?)
+SP inc/dec reversed, and also not just by 1?
+*/
+
 const add_byte_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 const compare_reg_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+const imm_byte_ld_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+const push_pop_regs: string[] = ['bc', 'de', 'hl', 'af'];
 
-
+/*
+cpu = new Cpu();
+cpu.mmu = new Mmu();
+cpu.reset();
+*/
 class Cpu {
   clock: Clock = {m: 0, t: 0};
   r: RegFile = {a: 0, b: 0, c: 0, d: 0, e:0, h: 0, l: 0, f: 0, pc: 0, sp: 0, clock: {m: 0, t: 0}};
+  mmu: Mmu; // need to set this after creating
 
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
@@ -101,34 +113,47 @@ class Cpu {
     this.r.clock.t = 4;
   }
 
-  // Push registers B and C to the stack (PUSH BC)
-  PUSHBC = () => {
-    this.r.sp--;                  // drop through the stack;
-    mmu.wb(this.r.sp, this.r.b);  // Write b at the stack pointer
-    this.r.sp--;                  // drop through the stack;
-    mmu.wb(this.r.sp, this.r.c);  // write c at the stack pointer
+  // Push registers @regs[0] and @regs[1] (a word) to the stack (PUSH NN)
+  PUSH = (regs: string) => {
+    if (push_pop_regs.indexOf(regs) <= -1) {
+      console.error(`Pushing regs ${regs} in PUSH, but ${regs} not an approved reg combo`);
+      return;
+    }
+    this.r.sp--;                                // drop through the stack;
+    this.mmu.wb(this.r.sp, this.r[regs[0]]);    // Write reg0 at the stack pointer
+    this.r.sp--;                                // drop through the stack;
+    this.mmu.wb(this.r.sp, this.r[regs[1]]);    // write reg1 at the stack pointer
 
+    // Three M-times taken
+    // TODO: Should this be 1 and 16?
+    this.r.clock.m = 3;
+    this.r.clock.t = 12;
+  }
+
+  // Pop registers @regs[0] and @regs[1] (a word) off the stack (POP NN)
+  POP = (regs: string) => {
+    if (push_pop_regs.indexOf(regs) <= -1) {
+      console.error(`Popping regs ${regs} in POP, but ${regs} not an approved reg combo`);
+      return;
+    }
+    this.r[regs[1]] = this.mmu.rb(this.r.sp, this.r.pc);     // read reg1 at the stack pointer
+    this.r.sp++;                                  // move back up the stack
+    this.r[regs[0]] = this.mmu.rb(this.r.sp, this.r.pc);     // read reg0 at the stack pointer
+    this.r.sp++;                                  // move back up the stack
     // Three M-times taken
     this.r.clock.m = 3;
     this.r.clock.t = 12;
   }
 
-  // Pop registers H and L off the stack (POP HL)
-  POPHL = () => {
-    this.r.l = mmu.rb(this.r.sp);   // read L at the stack pointer
-    this.r.sp++;                    // move back up the stack
-    this.r.h = mmu.rb(this.r.sp);   // read H at the stack pointer
-    this.r.sp++;                    // move back up the stack
-    // Three M-times taken
-    this.r.clock.m = 3;
-    this.r.clock.t = 12;
-  }
-
-  // Read a byte from absolute location into A (LD A, addr)
-  LDAmm = () => {
-    const addr: number = mmu.rw(this.r.pc);   // get address from instr (TODO???)
-    this.r.pc += 2;                           // advance PC
-    this.r.a = mmu.rb(addr);                  // read from address
+  // Read a byte from absolute location into @reg (LD N, addr)
+  LD_byte_imm = (reg: string) => {
+    if (imm_byte_ld_regs.indexOf(reg) <= -1) {
+      console.error(`Loading imm byte ${reg} in LD_byte_imm, but ${reg} not an approved reg`);
+      return;
+    }
+    const addr: number = this.mmu.rw(this.r.pc);    // get address from instr (TODO???)
+    this.r.pc += 2;                                 // advance PC, TODO: Do this before rb?
+    this.r[reg] = this.mmu.rb(addr, this.r.pc);     // read from address
     // 4 M-times taken
     this.r.clock.m = 4;
     this.r.clock.t = 16;

@@ -1,5 +1,7 @@
 var add_byte_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 var compare_reg_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+var imm_byte_ld_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+var push_pop_regs = ['bc', 'de', 'hl', 'af'];
 var Cpu = (function () {
     function Cpu() {
         var _this = this;
@@ -51,26 +53,38 @@ var Cpu = (function () {
             _this.r.clock.m = 1;
             _this.r.clock.t = 4;
         };
-        this.PUSHBC = function () {
+        this.PUSH = function (regs) {
+            if (push_pop_regs.indexOf(regs) <= -1) {
+                console.error("Pushing regs " + regs + " in PUSH, but " + regs + " not an approved reg combo");
+                return;
+            }
             _this.r.sp--;
-            mmu.wb(_this.r.sp, _this.r.b);
+            _this.mmu.wb(_this.r.sp, _this.r[regs[0]]);
             _this.r.sp--;
-            mmu.wb(_this.r.sp, _this.r.c);
+            _this.mmu.wb(_this.r.sp, _this.r[regs[1]]);
             _this.r.clock.m = 3;
             _this.r.clock.t = 12;
         };
-        this.POPHL = function () {
-            _this.r.l = mmu.rb(_this.r.sp);
+        this.POP = function (regs) {
+            if (push_pop_regs.indexOf(regs) <= -1) {
+                console.error("Popping regs " + regs + " in POP, but " + regs + " not an approved reg combo");
+                return;
+            }
+            _this.r[regs[1]] = _this.mmu.rb(_this.r.sp, _this.r.pc);
             _this.r.sp++;
-            _this.r.h = mmu.rb(_this.r.sp);
+            _this.r[regs[0]] = _this.mmu.rb(_this.r.sp, _this.r.pc);
             _this.r.sp++;
             _this.r.clock.m = 3;
             _this.r.clock.t = 12;
         };
-        this.LDAmm = function () {
-            var addr = mmu.rw(_this.r.pc);
+        this.LD_byte_imm = function (reg) {
+            if (imm_byte_ld_regs.indexOf(reg) <= -1) {
+                console.error("Loading imm byte " + reg + " in LD_byte_imm, but " + reg + " not an approved reg");
+                return;
+            }
+            var addr = _this.mmu.rw(_this.r.pc);
             _this.r.pc += 2;
-            _this.r.a = mmu.rb(addr);
+            _this.r[reg] = _this.mmu.rb(addr, _this.r.pc);
             _this.r.clock.m = 4;
             _this.r.clock.t = 16;
         };
