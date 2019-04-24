@@ -1,4 +1,5 @@
 var add_byte_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+var compare_reg_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 var Cpu = (function () {
     function Cpu() {
         var _this = this;
@@ -25,15 +26,23 @@ var Cpu = (function () {
             _this.r.clock.m = 1;
             _this.r.clock.t = 4;
         };
-        this.CPr_b = function () {
+        this.CP_reg = function (reg) {
+            if (compare_reg_regs.indexOf(reg) <= -1) {
+                console.error("Comparing reg " + reg + " in CP_reg, but " + reg + " not an approved reg");
+                return;
+            }
             var i = _this.r.a;
-            i -= _this.r.b;
+            i -= _this.r[reg];
             _this.r.f |= 0x40;
             if (!(i & 255)) {
                 _this.r.f |= 0x80;
             }
             if (i < 0) {
                 _this.r.f |= 0x10;
+            }
+            var halfByteSum = (_this.r.a & 0xf) - (_this.r[reg] & 0xf);
+            if ((halfByteSum & 0x10) == 0x10) {
+                _this.r.f |= 0x20;
             }
             _this.r.clock.m = 1;
             _this.r.clock.t = 4;

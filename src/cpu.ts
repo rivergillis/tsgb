@@ -20,17 +20,15 @@ interface RegFile {
   [key: string]: any
 }
 
-// Also support hl?
 const add_byte_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+const compare_reg_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+
 
 class Cpu {
   clock: Clock = {m: 0, t: 0};
   r: RegFile = {a: 0, b: 0, c: 0, d: 0, e:0, h: 0, l: 0, f: 0, pc: 0, sp: 0, clock: {m: 0, t: 0}};
 
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
-  // TODO: CHECK FOR HALF-CARRY
-  // Half-carry (0x20): Set if, in the result of the last operation, the lower half of the byte overflowed past 15;
-  //    check if (A^A)&0x10 is >0?
   ADD_byte = (reg: string) => {
     if (add_byte_regs.indexOf(reg) <= -1) {
       console.error(`Adding reg ${reg} in ADD_byte, but ${reg} not an approved reg`);
@@ -66,21 +64,31 @@ class Cpu {
     this.r.clock.t = 4;
   }
 
-  // Compare B to A, settings flags (CP A, B)
-  // TODO: CHECK FOR HALF-CARRY
-  // TODO: MAKE THIS WORK FOR ALL OPERANDS THAT REQUIRE IT
-  CPr_b = () => {
-    let i: number = this.r.a;   // temp copy of A
-    i -= this.r.b;              // sub b from copy of A
-    this.r.f |= 0x40;           // set subtraction flag
+  // Compare B to A, setting flags (CP A, B)
+  CP_reg = (reg: string) => {
+    if (compare_reg_regs.indexOf(reg) <= -1) {
+      console.error(`Comparing reg ${reg} in CP_reg, but ${reg} not an approved reg`);
+      return;
+    }
+
+    let i: number = this.r.a;       // temp copy of A
+    i -= this.r[reg];               // sub reg from copy of A
+    this.r.f |= 0x40;               // set subtraction flag
     // check for zero
     if (!(i & 255)) {
       this.r.f |= 0x80;
     }
     // check for underflow
+    // (This is how we check to see if a < n when using this instr)
     if (i < 0) {
       this.r.f |= 0x10;
     }
+    // check the half-carry bit (prolly works?)
+    const halfByteSum = (this.r.a & 0xf) - (this.r[reg] & 0xf);
+    if ((halfByteSum & 0x10) == 0x10) {
+      this.r.f |= 0x20;
+    }
+
     // 1 M-time taken
     this.r.clock.m = 1;
     this.r.clock.t = 4;
