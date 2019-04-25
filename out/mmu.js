@@ -112,7 +112,13 @@ var Mmu = (function () {
     }
     return Mmu;
 }());
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof (window) !== 'undefined') {
+    if (window.GbComponents === undefined) {
+        window.GbComponents = {};
+    }
+    window.GbComponents.mmu = new Mmu();
+}
+if (typeof (module) !== 'undefined' && module.exports) {
     module.exports = new Mmu();
 }
 //# sourceMappingURL=mmu.js.map

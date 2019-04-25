@@ -12,6 +12,14 @@ class Gpu {
   }
 }
 
+// If we're running in the browser, add this component to the window
+if (typeof(window) !== 'undefined') {
+  if ((window as any).GbComponents === undefined) {
+    (window as any).GbComponents = {};
+  }
+  (window as any).GbComponents.Gpu = new Gpu();
+}
+
 // If we're running under Node, export it for testing
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = new Gpu();

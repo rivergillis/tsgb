@@ -107,6 +107,12 @@ var Cpu = (function () {
     }
     return Cpu;
 }());
+if (typeof (window) !== 'undefined') {
+    if (window.GbComponents === undefined) {
+        window.GbComponents = {};
+    }
+    window.GbComponents.cpu = new Cpu();
+}
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = new Cpu();
 }
