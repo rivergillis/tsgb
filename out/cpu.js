@@ -70,9 +70,9 @@ var Cpu = (function () {
                 console.error("Popping regs " + regs + " in POP, but " + regs + " not an approved reg combo");
                 return;
             }
-            _this.r[regs[1]] = _this.mmu.rb(_this.r.sp, _this.r.pc);
+            _this.r[regs[1]] = _this.mmu.rb(_this.r.sp, _this.r.pc, _this.gpu);
             _this.r.sp++;
-            _this.r[regs[0]] = _this.mmu.rb(_this.r.sp, _this.r.pc);
+            _this.r[regs[0]] = _this.mmu.rb(_this.r.sp, _this.r.pc, _this.gpu);
             _this.r.sp++;
             _this.r.clock.m = 3;
             _this.r.clock.t = 12;
@@ -82,9 +82,9 @@ var Cpu = (function () {
                 console.error("Loading imm byte " + reg + " in LD_byte_imm, but " + reg + " not an approved reg");
                 return;
             }
-            var addr = _this.mmu.rw(_this.r.pc);
+            var addr = _this.mmu.rw(_this.r.pc, _this.r.pc, _this.gpu);
             _this.r.pc += 2;
-            _this.r[reg] = _this.mmu.rb(addr, _this.r.pc);
+            _this.r[reg] = _this.mmu.rb(addr, _this.r.pc, _this.gpu);
             _this.r.clock.m = 4;
             _this.r.clock.t = 16;
         };
@@ -107,8 +107,7 @@ var Cpu = (function () {
     }
     return Cpu;
 }());
-var cpu = new Cpu();
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = cpu;
+    module.exports = new Cpu();
 }
 //# sourceMappingURL=cpu.js.map

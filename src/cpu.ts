@@ -33,12 +33,16 @@ const push_pop_regs: string[] = ['bc', 'de', 'hl', 'af'];
 /*
 cpu = new Cpu();
 cpu.mmu = new Mmu();
+cpu.gpu = new Gpu();
+mmu.reset();
 cpu.reset();
+gpu.reset();
 */
 class Cpu {
   clock: Clock = {m: 0, t: 0};
   r: RegFile = {a: 0, b: 0, c: 0, d: 0, e:0, h: 0, l: 0, f: 0, pc: 0, sp: 0, clock: {m: 0, t: 0}};
   mmu: Mmu; // need to set this after creating
+  gpu: Gpu; // need to set after creating
 
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
@@ -136,10 +140,10 @@ class Cpu {
       console.error(`Popping regs ${regs} in POP, but ${regs} not an approved reg combo`);
       return;
     }
-    this.r[regs[1]] = this.mmu.rb(this.r.sp, this.r.pc);     // read reg1 at the stack pointer
-    this.r.sp++;                                  // move back up the stack
-    this.r[regs[0]] = this.mmu.rb(this.r.sp, this.r.pc);     // read reg0 at the stack pointer
-    this.r.sp++;                                  // move back up the stack
+    this.r[regs[1]] = this.mmu.rb(this.r.sp, this.r.pc, this.gpu);  // read reg1 at the stack pointer
+    this.r.sp++;                                                    // move back up the stack
+    this.r[regs[0]] = this.mmu.rb(this.r.sp, this.r.pc, this.gpu);  // read reg0 at the stack pointer
+    this.r.sp++;                                                    // move back up the stack
     // Three M-times taken
     this.r.clock.m = 3;
     this.r.clock.t = 12;
@@ -151,9 +155,9 @@ class Cpu {
       console.error(`Loading imm byte ${reg} in LD_byte_imm, but ${reg} not an approved reg`);
       return;
     }
-    const addr: number = this.mmu.rw(this.r.pc);    // get address from instr (TODO???)
-    this.r.pc += 2;                                 // advance PC, TODO: Do this before rb?
-    this.r[reg] = this.mmu.rb(addr, this.r.pc);     // read from address
+    const addr: number = this.mmu.rw(this.r.pc, this.r.pc, this.gpu); // get address from instr (TODO???)
+    this.r.pc += 2;                                         // advance PC, TODO: Do this before rb?
+    this.r[reg] = this.mmu.rb(addr, this.r.pc, this.gpu);   // read from address
     // 4 M-times taken
     this.r.clock.m = 4;
     this.r.clock.t = 16;
@@ -186,9 +190,9 @@ class Cpu {
 // ];
 
 
-const cpu = new Cpu();
+// const cpu = new Cpu();
 
 // If we're running under Node, export it for testing
 if(typeof module !== 'undefined' && module.exports) {
-  module.exports = cpu;
+  module.exports = new Cpu();
 }

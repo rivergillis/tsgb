@@ -1,8 +1,10 @@
 const cpu = require("../out/cpu");
 const mmu = require("../out/mmu");
+const gpu = require("../out/gpu");
 const assert = require("chai").assert;
 
 cpu.mmu = mmu;
+cpu.gpu = gpu;
 
 describe("cpu", function() {
   beforeEach(function() {

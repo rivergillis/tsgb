@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "tsc && mocha tests"
+    "test": "tsc && mocha"
   },
   "author": "River Gillis <jrivergillis@gmail.com>",
   "license": "ISC",
