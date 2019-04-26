@@ -171,6 +171,7 @@ class Cpu {
   }
 }
 
+// dispatcher process:
 // while(true)
 // {
 //     var op = MMU.rb(Z80._r.pc++);              // Fetch instruction
@@ -178,6 +179,8 @@ class Cpu {
 //     Z80._r.pc &= 65535;                        // Mask PC to 16 bits
 //     Z80._clock.m += Z80._r.m;                  // Add time to CPU clock
 //     Z80._clock.t += Z80._r.t;
+//
+//     GPU.step(this.r.clock.t);  // tick the GPU
 // }
 
 // Z80._map = [
