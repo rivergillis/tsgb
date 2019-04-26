@@ -1,3 +1,4 @@
+// TODO: Change mode to be stringly typed or enum
 class Gpu {
   ctx: CanvasRenderingContext2D = {} as CanvasRenderingContext2D;
   // Access pixel pos with y * frameBuffer.width + x
@@ -46,9 +47,66 @@ class Gpu {
     }
   }
 
-  // @cpu_t is Z80.r.clock.t, the t time for the last instruction
+  // @cpu_t is cpu.r.clock.t, the t time for the last instruction
   step = (cpu_last_t: number) => {
     this.modeclock += cpu_last_t;
+    switch (this.mode) {
+      // OAM read mode, scanline is active
+      case 2:
+        if (this.modeclock >= 80) {
+          // Enter scanline mode 3 (vram), this mode is done
+          this.modeclock = 0;
+          this.mode = 3;
+        }
+        break;
+      // VRAM read mode, scanline is active
+      // Treat end of mode 3 as the end of scanline
+      case 3:
+        if (this.modeclock >= 172) {
+          // Scanline ends, enter hblank mode
+          this.modeclock = 0;
+          this.mode = 0;
+          // Write a scanline to the framebuffer since we just finished it
+          this.renderScanline();
+        }
+        break;
+      // Hblank period
+      // After the last hbalnk, push the framebuffer data to the canvas for display
+      case 0:
+        if (this.modeclock >= 204) {
+          this.modeclock = 0;
+          this.line++;
+          if (this.line === 143) {
+            // Enter vblank mode since we hit the last line, and write the framebuffer
+            this.mode = 1;
+            this.ctx.putImageData(this.frameBuffer, 0, 0);
+          } else {
+            // Otherwise go back to OAM read mode for the start of the line
+            this.mode = 2;
+          }
+        }
+      // Vblank period, lasts 10 lines' worth of time (scan and blank)
+      case 1:
+        // Every time we pass a line's worth of time for scanning and blanking, up the line counter
+        // Once we go beyond line 153, we can start scanning again.
+        if (this.modeclock >= 456) {
+          this.modeclock = 0;
+          this.line++;
+
+          // 10 lines beyond the last line, is this the best way to do this?
+          // TODO: Also, should this be >= 153?
+          if (this.line > 153) {
+            // Restart scanning modes, go to OAM read
+            this.mode = 2;
+            this.line = 0;
+          }
+        }
+        break;
+    }
+  }
+
+  renderScanline = () => {
+
   }
 }
 
