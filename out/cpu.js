@@ -103,6 +103,8 @@ var Cpu = (function () {
             _this.r.clock.t = 0;
             _this.clock.m = 0;
             _this.clock.t = 0;
+            _this.gpu.reset();
+            _this.mmu.reset();
         };
     }
     return Cpu;

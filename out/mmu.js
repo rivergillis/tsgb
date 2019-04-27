@@ -116,7 +116,13 @@ if (typeof (window) !== 'undefined') {
     if (window.GbComponents === undefined) {
         window.GbComponents = {};
     }
-    window.GbComponents.mmu = new Mmu();
+    if (window.GbComponents.cpu === undefined) {
+        console.error("Incorrect load order, MMU.js must load after CPU.js is loaded!");
+        window.GbComponents.mmu = new Mmu();
+    }
+    else {
+        window.GbComponents.cpu.mmu = new Mmu();
+    }
 }
 if (typeof (module) !== 'undefined' && module.exports) {
     module.exports = new Mmu();

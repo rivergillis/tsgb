@@ -131,7 +131,13 @@ if (typeof(window) !== 'undefined') {
   if ((window as any).GbComponents === undefined) {
     (window as any).GbComponents = {};
   }
-  (window as any).GbComponents.mmu = new Mmu();
+  if ((window as any).GbComponents.cpu === undefined) {
+    console.error("Incorrect load order, MMU.js must load after CPU.js is loaded!");
+    (window as any).GbComponents.mmu = new Mmu();
+  } else {
+    // Attach ourselves to the CPU component
+    (window as any).GbComponents.cpu.mmu = new Mmu();
+  }
 }
 
 // If we're running under Node, export it for testing

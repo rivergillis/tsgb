@@ -12,6 +12,11 @@ class Gpu {
   modeclock: number = 0;    // the number of clocks spent in the current mode
   line: number = 0;         // the current line being drawn
 
+  // We have 256+(256/2) = 384 total tiles
+  // Each tile consists of 8x8 pixels
+  // For each tile (tileset[i]), we have pixel P at point j,k (tileset[i][j][k])
+  tileset: number[][][] = [];
+
   reset = () => {
     // console.log('gpu reset');
     // Clear out the vram and OAM
@@ -21,13 +26,23 @@ class Gpu {
     for (let i = 0; i < 160; i++) {
       this.oam[i] = 0;
     }
+    // Set the linemode to OAM
+    this.mode = 2;
+
+    // Clear the tileset
+    this.tileset = [];
+    for (let i = 0; i < 384; i++) {
+      this.tileset[i] = [];
+      // For each tile (tileset[i]), we have pixel P at point j,k (tileset[i][j][k])
+      for (let j = 0; j < 8; j++) {
+        this.tileset[i][j] = [0,0,0,0,0,0,0,0];
+      }
+    }
+
     // We're done if running tests on node
     if (typeof(document) === 'undefined') {
       return;
     }
-
-    // Set the linemode to OAM
-    this.mode = 2;
 
     // Then grab the contexts from the DOM and init the canvas
     const canvas: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById("screen");
@@ -115,6 +130,11 @@ class Gpu {
   renderScanline = () => {
 
   }
+
+  // Takes a value written to VRAM and udpates the internal tile data set
+  updateTile = (addr: number, val: number) => {
+
+  }
 }
 
 // If we're running in the browser, add this component to the window
@@ -122,7 +142,13 @@ if (typeof(window) !== 'undefined') {
   if ((window as any).GbComponents === undefined) {
     (window as any).GbComponents = {};
   }
-  (window as any).GbComponents.gpu = new Gpu();
+  if ((window as any).GbComponents.cpu === undefined) {
+    console.error("Incorrect load order, GPU.js must load after CPU.js is loaded!");
+    (window as any).GbComponents.gpu = new Gpu();
+  } else {
+    // Attach ourselves to the CPU component
+    (window as any).GbComponents.cpu.gpu = new Gpu();
+  }
 }
 
 // If we're running under Node, export it for testing
