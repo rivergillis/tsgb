@@ -165,6 +165,7 @@ class Cpu {
 
   // Reset the CPU (used on startup)
   reset = () => {
+    // console.log('cpu reset');
     this.r.a=0;this.r.b=0;this.r.c=0;this.r.d=0;this.r.e=0;this.r.h=0;
     this.r.l=0;this.r.f=0;this.r.sp=0;this.r.pc=0; this.r.clock.m=0;this.r.clock.t=0;
     this.clock.m=0;this.clock.t=0;

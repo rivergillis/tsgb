@@ -11,7 +11,7 @@ describe("cpu", function() {
     cpu.reset();
   });
 
-  describe("#reset()", function() {
+  describe("#reset", function() {
     it("should reset all registers to 0", function() {
       cpu.reset();
       assert.deepStrictEqual(cpu.r, {

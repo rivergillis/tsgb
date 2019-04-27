@@ -7,7 +7,10 @@ if (typeof((window as any).GbComponents) === 'undefined') {
 }
 
 const system: any = (window as any).GbComponents;
-console.log(system);
 
 // Todo: reset the rest in the correct order
+system.mmu.reset();
+system.cpu.reset();
 system.gpu.reset();
+
+console.log(system);

@@ -28,6 +28,7 @@ class Mmu {
   zram: number[] = [];  // working ram
 
   reset = () => {
+    // console.log('mmu reset');
     for (let i =0; i < 8192; i++) {
       this.wram[i] = 0x00;
     }

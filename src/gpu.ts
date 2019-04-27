@@ -8,11 +8,12 @@ class Gpu {
   oam: number[] = [];
 
   // http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-GPU-Timings
-  mode: number = 0;         // the current GPU operating mode
+  mode: number = 2;         // the current GPU operating mode
   modeclock: number = 0;    // the number of clocks spent in the current mode
   line: number = 0;         // the current line being drawn
 
   reset = () => {
+    // console.log('gpu reset');
     // Clear out the vram and OAM
     for (let i = 0; i < 8192; i++) {
       this.vram[i] = 0;
@@ -24,6 +25,10 @@ class Gpu {
     if (typeof(document) === 'undefined') {
       return;
     }
+
+    // Set the linemode to OAM
+    this.mode = 2;
+
     // Then grab the contexts from the DOM and init the canvas
     const canvas: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById("screen");
     if (canvas && canvas.getContext) {
@@ -71,7 +76,7 @@ class Gpu {
         }
         break;
       // Hblank period
-      // After the last hbalnk, push the framebuffer data to the canvas for display
+      // After the last hblank, push the framebuffer data to the canvas for display
       case 0:
         if (this.modeclock >= 204) {
           this.modeclock = 0;
@@ -79,7 +84,9 @@ class Gpu {
           if (this.line === 143) {
             // Enter vblank mode since we hit the last line, and write the framebuffer
             this.mode = 1;
-            this.ctx.putImageData(this.frameBuffer, 0, 0);
+            if (this.ctx.putImageData) {
+              this.ctx.putImageData(this.frameBuffer, 0, 0);
+            }
           } else {
             // Otherwise go back to OAM read mode for the start of the line
             this.mode = 2;
