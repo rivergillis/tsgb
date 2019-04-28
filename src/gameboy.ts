@@ -23,5 +23,3 @@ document.getElementById('fileInput').addEventListener('change', event => {
   }
   reader.readAsArrayBuffer(file);
 }, false);
-
-// system.cpu.mmu.loadRom();

@@ -56,7 +56,7 @@ class Mmu {
           }
         }
         return this.rom[addr];
-      // ROM0
+      // ROM0 (16k when you take 0x0000 after-bios into account)
       case 0x1000:
       case 0x2000:
       case 0x3000:
@@ -136,7 +136,14 @@ class Mmu {
 
   loadRom = (data: Uint8Array) => {
     console.log('load rom');
-    console.log(data);
+
+    // First clear the rom
+    this.rom = [];
+    // Then copy the data over
+    data.forEach(val => {
+      this.rom.push(val);
+    })
+    console.log(this.rom);
   }
 }
 

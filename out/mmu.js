@@ -117,8 +117,12 @@ var Mmu = (function () {
         };
         this.ww = function (addr, val) { };
         this.loadRom = function (data) {
-            console.log('load rom!');
-            console.log(data);
+            console.log('load rom');
+            _this.rom = [];
+            data.forEach(function (val) {
+                _this.rom.push(val);
+            });
+            console.log(_this.rom);
         };
     }
     return Mmu;
