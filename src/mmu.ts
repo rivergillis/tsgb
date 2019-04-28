@@ -117,12 +117,26 @@ class Mmu {
     return this.rb(addr, pc, gpu) + (this.rb(addr+1, pc, gpu) << 8);
   }
   // Write 8-bit byte @val to @addr
-  wb = (addr: number, val: number) => {}
+  wb = (addr: number, val: number, gpu: Gpu) => {
+    switch(addr & 0xF000) {
+      // TODO: Rest of the cases
+      // VRAM
+      case 0x8000:
+      case 0x9000:
+        gpu.vram[addr & 0x1FFF] = val;
+        // Update the tilesets after we write to VRAM
+        gpu.updateTile(addr);
+        break;
+      default:
+        console.error('unimplemented in mmu#wb')
+    }
+  }
   // Write 16-bit word @val to @addr
   ww = (addr: number, val: number) => {}
 
-  loadRom = () => {
-    console.log('todo!');
+  loadRom = (data: Uint8Array) => {
+    console.log('load rom');
+    console.log(data);
   }
 }
 

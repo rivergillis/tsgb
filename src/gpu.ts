@@ -14,8 +14,14 @@ class Gpu {
 
   // We have 256+(256/2) = 384 total tiles
   // Each tile consists of 8x8 pixels
-  // For each tile (tileset[i]), we have pixel P at point j,k (tileset[i][j][k])
+  // For each tile (tileset[i]), we have pixel P at point x,y (tileset[i][y][x])
   tileset: number[][][] = [];
+
+  bgmap: boolean = false; // TODO: Figure this out
+  scy: number = 0;        // AND this
+  scx: number = 0;        // AND this
+  bgtile: number = 0;     // AND this, (which tileset num?)
+  pal: number[][] = [];     // AND this
 
   reset = () => {
     // console.log('gpu reset');
@@ -128,12 +134,70 @@ class Gpu {
   }
 
   renderScanline = () => {
+    // VRAM offset for the tile map
+    let mapOffset = this.bgmap ? 0x1C00 : 0x1800;
+    // Find which line of the tiles to use in the map
+    mapOffset += ((this.line + this.scy) & 255) >> 3;
+    // Find which tile to start with in the map line
+    let lineOffset = (this.scx >> 3);
+    // Find which line of pixels to use in the tiles
+    let y = (this.line + this.scy) & 7;
+    // Find where in the tile line to start
+    let x = this.scx & 7;
+    // Find where to render on the canvas
+    let canvasOffset = this.line * 160 * 4;
 
+    // Read the tile index from the background map
+    let color: number[];
+    let tile = this.vram[mapOffset + lineOffset];
+
+    // If the tile data set in use is #1, the
+    // indices are signed; calc a real tile offset
+    if (this.bgtile === 1 && tile < 128) {
+      tile += 256;
+    }
+
+    for (let i = 0; i < 160; i++) {
+      // Re-map the tile pixel thru the palette
+      color = this.pal[this.tileset[tile][y][x]];
+      // Plot the pixel to the canvas framebuf
+      this.frameBuffer.data[canvasOffset+0] = color[0];
+      this.frameBuffer.data[canvasOffset+1] = color[1];
+      this.frameBuffer.data[canvasOffset+2] = color[2];
+      this.frameBuffer.data[canvasOffset+3] = color[3];
+      canvasOffset += 4;
+
+      // When this tile ends, read another
+      x++;
+      if (x === 8) {
+        x = 0;
+        lineOffset = (lineOffset + 1) & 31;
+        tile = this.vram[mapOffset + lineOffset];
+        if (this.bgtile === 1 && tile < 128) {
+          tile += 256;
+        }
+      }
+    }
   }
 
   // Takes a value written to VRAM and udpates the internal tile data set
-  updateTile = (addr: number, val: number) => {
+  // TODO: understand this function
+  updateTile = (addr: number) => {
+    // Get the "base address" for this tile row
+    addr &= 0x1FFE;
+    // Figure out which tile and row was updated
+    const tile = (addr >> 4) & 511;
+    const y = (addr >> 1) & 7;
 
+    let sx = 0;
+    for (let x = 0; x < 8; x++) {
+      // FInd bit index for this pixel
+      sx = 1 << (7-x);
+      // Then finally update the tile set
+      this.tileset[tile][y][x] = 
+        ((this.vram[addr] & sx) ? 1 : 0) +
+        ((this.vram[addr+1] & sx) ? 2: 0);
+    }
   }
 }
 

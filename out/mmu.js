@@ -104,10 +104,21 @@ var Mmu = (function () {
         this.rw = function (addr, pc, gpu) {
             return _this.rb(addr, pc, gpu) + (_this.rb(addr + 1, pc, gpu) << 8);
         };
-        this.wb = function (addr, val) { };
+        this.wb = function (addr, val, gpu) {
+            switch (addr & 0xF000) {
+                case 0x8000:
+                case 0x9000:
+                    gpu.vram[addr & 0x1FFF] = val;
+                    gpu.updateTile(addr);
+                    break;
+                default:
+                    console.error('unimplemented in mmu#wb');
+            }
+        };
         this.ww = function (addr, val) { };
-        this.loadRom = function () {
-            console.log('todo!');
+        this.loadRom = function (data) {
+            console.log('load rom!');
+            console.log(data);
         };
     }
     return Mmu;

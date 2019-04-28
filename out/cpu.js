@@ -59,9 +59,9 @@ var Cpu = (function () {
                 return;
             }
             _this.r.sp--;
-            _this.mmu.wb(_this.r.sp, _this.r[regs[0]]);
+            _this.mmu.wb(_this.r.sp, _this.r[regs[0]], _this.gpu);
             _this.r.sp--;
-            _this.mmu.wb(_this.r.sp, _this.r[regs[1]]);
+            _this.mmu.wb(_this.r.sp, _this.r[regs[1]], _this.gpu);
             _this.r.clock.m = 3;
             _this.r.clock.t = 12;
         };
