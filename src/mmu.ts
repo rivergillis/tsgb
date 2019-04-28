@@ -119,6 +119,7 @@ class Mmu {
   // Read 16-bit word from @addr, @pc is the CPU's current program counter, @gpu is the gpu instance
   rw = (addr: number, pc: number, gpu: Gpu): number => {
     // We shift the addr+1 byte back because it should be the high end of the word
+    // so words are stored as low-byte high-byte
     return this.rb(addr, pc, gpu) + (this.rb(addr+1, pc, gpu) << 8);
   }
   // Write 8-bit byte @val to @addr

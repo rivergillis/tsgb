@@ -28,6 +28,7 @@ SP inc/dec reversed, and also not just by 1?
 const add_byte_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 const compare_reg_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 const imm_byte_ld_regs: string[] = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+const imm_word_ld_regs: string[] = ['bc', 'de', 'hl', 'sp'];
 const push_pop_regs: string[] = ['bc', 'de', 'hl', 'af'];
 
 /*
@@ -123,6 +124,7 @@ class Cpu {
       console.error(`Pushing regs ${regs} in PUSH, but ${regs} not an approved reg combo`);
       return;
     }
+    // TODO: Use ww?
     this.r.sp--;                                                      // drop through the stack;
     this.mmu.wb(this.r.sp, this.r[regs[0]], this.r.pc, this.gpu);     // Write reg0 at the stack pointer
     this.r.sp--;                                                      // drop through the stack;
@@ -150,17 +152,29 @@ class Cpu {
   }
 
   // Read a byte from absolute location into @reg (LD N, addr)
-  LD_byte_imm = (reg: string) => {
-    if (imm_byte_ld_regs.indexOf(reg) <= -1) {
-      console.error(`Loading imm byte ${reg} in LD_byte_imm, but ${reg} not an approved reg`);
+  LD_word_imm = (regs: string) => {
+    if (imm_word_ld_regs.indexOf(regs) <= -1) {
+      console.error(`Loading imm byte ${regs} in LD_word_imm, but ${regs} not an approved reg`);
       return;
     }
-    const addr: number = this.mmu.rw(this.r.pc, this.r.pc, this.gpu); // get address from instr (TODO???)
-    this.r.pc += 2;                                         // advance PC, TODO: Do this before rb?
-    this.r[reg] = this.mmu.rb(addr, this.r.pc, this.gpu);   // read from address
-    // 4 M-times taken
-    this.r.clock.m = 4;
-    this.r.clock.t = 16;
+    const imm: number = this.mmu.rw(this.r.pc, this.r.pc, this.gpu);  // get imm from instr 
+    this.r.pc += 2;                                                   // advance PC twice bc 3-byte instr
+    if (regs == 'sp') {
+      // If we're storing the 16-byte imm in the 16-byte stack pointer, do that
+      this.r.sp = imm;
+    } else {
+      // Otherwise store into seperate registers
+      // Pretty sure this is correct
+      this.r[regs[0]] = imm >> 8;     // store the upper byte in the first register
+      this.r[regs[1]] = imm & 0x00FF; // store the lower byte in the second register
+    }
+    // 3 M-times taken
+    this.r.clock.m = 3;
+    this.r.clock.t = 12;
+  }
+
+  LD_byte_imm = (reg: string) => {
+    // TODO
   }
 
   // Reset the CPU (used on startup)
@@ -174,7 +188,15 @@ class Cpu {
     this.mmu.reset();
   }
 
-  instructionMap: Function[] = [reset];
+  buildInstructionMap = (): Function[] => {
+    return [
+      // 0x0x
+      this.NOP, this.LD_word_imm.bind("bc")
+      // 0x1x
+    ];
+  }
+
+  instructionMap: Function[] = this.buildInstructionMap();
 }
 
 // dispatcher process:

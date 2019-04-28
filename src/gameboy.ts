@@ -33,9 +33,10 @@ const frame = () => {
   do {
     console.log(cpu.r);
     console.log(mmu.rb(cpu.r.pc, cpu.r.pc, gpu));
-    cpu.instructionMap[mmu.rb(cpu.r.pc, cpu.r.pc, gpu)]();
+    const instr: Function = cpu.instructionMap[mmu.rb(cpu.r.pc, cpu.r.pc, gpu)];
     cpu.r.pc++;
     cpu.r.pc &= 65535;
+    instr();
     cpu.clock.m += cpu.r.clock.m;
     cpu.clock.t += cpu.r.clock.t;
     gpu.step(cpu.clock.t);
@@ -50,7 +51,7 @@ const run = () => {
   } else {
     clearInterval(interval);
     interval = null;
-    document.getElementById('run').innerHTML = 'run';
+    document.getElementById('run').innerHTML = "run";
   }
 }
 

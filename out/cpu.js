@@ -1,6 +1,7 @@
 var add_byte_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 var compare_reg_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
 var imm_byte_ld_regs = ['a', 'b', 'c', 'd', 'e', 'h', 'l'];
+var imm_word_ld_regs = ['bc', 'de', 'hl', 'sp'];
 var push_pop_regs = ['bc', 'de', 'hl', 'af'];
 var Cpu = (function () {
     function Cpu() {
@@ -77,16 +78,24 @@ var Cpu = (function () {
             _this.r.clock.m = 3;
             _this.r.clock.t = 12;
         };
-        this.LD_byte_imm = function (reg) {
-            if (imm_byte_ld_regs.indexOf(reg) <= -1) {
-                console.error("Loading imm byte " + reg + " in LD_byte_imm, but " + reg + " not an approved reg");
+        this.LD_word_imm = function (regs) {
+            if (imm_word_ld_regs.indexOf(regs) <= -1) {
+                console.error("Loading imm byte " + regs + " in LD_word_imm, but " + regs + " not an approved reg");
                 return;
             }
-            var addr = _this.mmu.rw(_this.r.pc, _this.r.pc, _this.gpu);
+            var imm = _this.mmu.rw(_this.r.pc, _this.r.pc, _this.gpu);
             _this.r.pc += 2;
-            _this.r[reg] = _this.mmu.rb(addr, _this.r.pc, _this.gpu);
-            _this.r.clock.m = 4;
-            _this.r.clock.t = 16;
+            if (regs == 'sp') {
+                _this.r.sp = imm;
+            }
+            else {
+                _this.r[regs[0]] = imm >> 8;
+                _this.r[regs[1]] = imm & 0x00FF;
+            }
+            _this.r.clock.m = 3;
+            _this.r.clock.t = 12;
+        };
+        this.LD_byte_imm = function (reg) {
         };
         this.reset = function () {
             _this.r.a = 0;
@@ -106,7 +115,12 @@ var Cpu = (function () {
             _this.gpu.reset();
             _this.mmu.reset();
         };
-        this.instructionMap = [reset];
+        this.buildInstructionMap = function () {
+            return [
+                _this.NOP, _this.LD_word_imm.bind("bc")
+            ];
+        };
+        this.instructionMap = this.buildInstructionMap();
     }
     return Cpu;
 }());
