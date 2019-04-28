@@ -123,10 +123,10 @@ class Cpu {
       console.error(`Pushing regs ${regs} in PUSH, but ${regs} not an approved reg combo`);
       return;
     }
-    this.r.sp--;                                          // drop through the stack;
-    this.mmu.wb(this.r.sp, this.r[regs[0]], this.gpu);    // Write reg0 at the stack pointer
-    this.r.sp--;                                          // drop through the stack;
-    this.mmu.wb(this.r.sp, this.r[regs[1]], this.gpu);    // write reg1 at the stack pointer
+    this.r.sp--;                                                      // drop through the stack;
+    this.mmu.wb(this.r.sp, this.r[regs[0]], this.r.pc, this.gpu);     // Write reg0 at the stack pointer
+    this.r.sp--;                                                      // drop through the stack;
+    this.mmu.wb(this.r.sp, this.r[regs[1]], this.r.pc, this.gpu);     // write reg1 at the stack pointer
 
     // Three M-times taken
     // TODO: Should this be 1 and 16?
@@ -173,6 +173,8 @@ class Cpu {
     this.gpu.reset();
     this.mmu.reset();
   }
+
+  instructionMap: Function[] = [reset];
 }
 
 // dispatcher process:

@@ -10,18 +10,25 @@ class Gpu {
   // http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-GPU-Timings
   mode: number = 2;         // the current GPU operating mode
   modeclock: number = 0;    // the number of clocks spent in the current mode
-  line: number = 0;         // the current line being drawn
+  line: number = 0;         // the current line being drawn (0xFF44 Read)
 
   // We have 256+(256/2) = 384 total tiles
   // Each tile consists of 8x8 pixels
   // For each tile (tileset[i]), we have pixel P at point x,y (tileset[i][y][x])
+  // So this holds bg0 and bg1 (the window?)
   tileset: number[][][] = [];
 
+  scy: number = 0;        // 0xFF42: Scroll-Y, RW
+  scx: number = 0;        // 0xFF43: Scroll-X, RW
+  // Background palette reg consists of four 2-bit palette entries, emulated here.
+  pal: number[][] = [];   // OXFF47 write?
+
+  // 0xFF40: LCD/GPU control
+  // TODO: Figure out exactly what these do an give them better names
+  switchbg: boolean = false;
   bgmap: boolean = false; // TODO: Figure this out
-  scy: number = 0;        // AND this
-  scx: number = 0;        // AND this
-  bgtile: number = 0;     // AND this, (which tileset num?)
-  pal: number[][] = [];     // AND this
+  bgtile: boolean = false; // (which tileset num?)
+  switchlcd: boolean = false;
 
   reset = () => {
     // console.log('gpu reset');
@@ -153,7 +160,7 @@ class Gpu {
 
     // If the tile data set in use is #1, the
     // indices are signed; calc a real tile offset
-    if (this.bgtile === 1 && tile < 128) {
+    if (this.bgtile && tile < 128) {
       tile += 256;
     }
 
@@ -173,7 +180,7 @@ class Gpu {
         x = 0;
         lineOffset = (lineOffset + 1) & 31;
         tile = this.vram[mapOffset + lineOffset];
-        if (this.bgtile === 1 && tile < 128) {
+        if (this.bgtile && tile < 128) {
           tile += 256;
         }
       }
@@ -197,6 +204,60 @@ class Gpu {
       this.tileset[tile][y][x] = 
         ((this.vram[addr] & sx) ? 1 : 0) +
         ((this.vram[addr+1] & sx) ? 2: 0);
+    }
+  }
+
+  rb = (addr: number): number => {
+    switch (addr) {
+      // LCD control
+      case 0xFF40:
+        return  (this.switchbg  ? 0x01 : 0x00) |
+                (this.bgmap     ? 0x08 : 0x00) |
+                (this.bgtile    ? 0x10 : 0x00) |
+                (this.switchlcd ? 0x80 : 0x00);
+      case 0xFF42: 
+        return this.scy;
+      case 0xFF43:
+        return this.scx;
+      case 0xFF44:
+        return this.line;
+      default:
+        console.error("Unimplemented in gbpu#rb"); 
+        return 0;
+    }
+  }
+
+  wb = (addr: number, val: number) => {
+    switch (addr) {
+      // LCD control
+      case 0xFF40:
+        this.switchbg     = (val & 0x01) ? true : false;
+        this.bgmap        = (val & 0x08) ? true : false;
+        this.bgtile       = (val & 0x10) ? true : false;
+        this.switchlcd    = (val & 0x80) ? true : false;
+        break;
+      case 0xFF42: 
+        this.scy = val;
+        break;
+      case 0xFF43:
+        this.scx = val;
+        break;
+      // Background palette
+      case 0xFF47:
+        for (let i = 0; i < 4; i++) {
+          // TODO: Understand
+          switch ((val >> (i*2)) & 3) {
+            case 0: this.pal[i] = [255, 255, 255, 255]; break;
+            case 1: this.pal[i] = [192, 192, 192, 255]; break;
+            case 2: this.pal[i] = [ 96,  96,  96,  96]; break;
+            case 3: this.pal[i] = [  0,   0,   0,   0]; break;
+            default:
+              console.error("Bad bgpal in gpu#wb");
+          }
+        }
+        break;
+      default:
+        console.error("Unimplemented in gbpu#wb"); 
     }
   }
 }

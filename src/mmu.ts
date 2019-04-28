@@ -104,7 +104,12 @@ class Mmu {
             if (addr >= 0xFF80) {
               return this.zram[addr & 0x7F];
             } else {
-              // I/O control handling (TODO)
+              // I/O control handling
+              switch(addr & 0x00F0) {
+                // GPU (64 registers)
+                case 0x40: case 0x50: case 0x60: case 0x70:
+                  return gpu.rb(addr);
+              }
               return 0;
             }
         }
@@ -117,22 +122,101 @@ class Mmu {
     return this.rb(addr, pc, gpu) + (this.rb(addr+1, pc, gpu) << 8);
   }
   // Write 8-bit byte @val to @addr
-  wb = (addr: number, val: number, gpu: Gpu) => {
+  wb = (addr: number, val: number, pc: number, gpu: Gpu) => {
+    // Switch on the upper byte
     switch(addr & 0xF000) {
-      // TODO: Rest of the cases
-      // VRAM
+      // Bios (256b/ROM0)
+      case 0x0000:
+        if (this.inbios) {
+          if (addr < 0x0100) {
+            // Should this exist?
+            this.bios[addr] = val;
+            break;
+          } else if (pc === 0x0100) {
+            this.inbios = false;
+          }
+        }
+        this.rom[addr] = val;
+        break;
+      // ROM0 (16k when you take 0x0000 after-bios into account)
+      case 0x1000:
+      case 0x2000:
+      case 0x3000:
+        this.rom[addr] = val;
+        break;
+      // ROM1 (unbanked) (16k)
+      case 0x4000:
+      case 0x5000:
+      case 0x6000:
+      case 0x7000:
+        this.rom[addr] = val;
+        break;
+      // VRAM (8k)
       case 0x8000:
       case 0x9000:
         gpu.vram[addr & 0x1FFF] = val;
         // Update the tilesets after we write to VRAM
         gpu.updateTile(addr);
         break;
+      // external RAM (8k)
+      case 0xA000:
+      case 0xB000:
+        this.eram[addr & 0x1FFF] = val;
+        break;
+      // working RAM (8k)
+      case 0xC000:
+      case 0xD000:
+        this.wram[addr & 0x1FFF];
+        break;
+      // working RAM shadow
+      case 0xE000:
+        this.wram[addr & 0x1FFF];
+        break;
+      // working RAM shadow, I/O, zero-page RAM
+      case 0xF000:
+        switch(addr & 0x0F00) {
+          // working ram shadow
+          case 0x000: case 0x100: case 0x200: case 0x300:
+          case 0x400: case 0x500: case 0x600: case 0x700:
+          case 0x800: case 0x900: case 0xA00: case 0xB00:
+          case 0xC00: case 0xD00:
+            this.wram[addr & 0x1FFF] = val;
+            break;
+          // graphics: object attribute memory
+          // OAM is 160 bytes, remaining bytes read as 0
+          case 0xE00:
+            if (addr < 0xFEA0) {
+              gpu.oam[addr & 0xFF] = val;
+              break;
+            }
+            break;
+          // zero-page
+          case 0xF00:
+            if (addr >= 0xFF80) {
+              this.zram[addr & 0x7F] = val;
+              break;
+            } else {
+              // I/O
+              switch (addr & 0x00F0) {
+                //GPU
+                case 0x40: case 0x50: case 0x60: case 0x70:
+                  gpu.wb(addr, val);
+                  break;
+              }
+            }
+            break;
+        }
+        break;
       default:
-        console.error('unimplemented in mmu#wb')
+        console.error('Bad write in in mmu#wb')
     }
   }
   // Write 16-bit word @val to @addr
-  ww = (addr: number, val: number) => {}
+  ww = (addr: number, val: number, pc: number, gpu: Gpu) => {
+    // Unsure if this is correct
+    this.wb(addr, val & 0xFF, pc, gpu); // write the lower byte
+    this.wb(addr+1, val>>8, pc, gpu);   // write the upper byte
+  }
 
   loadRom = (data: Uint8Array) => {
     console.log('load rom');

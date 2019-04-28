@@ -7,12 +7,12 @@ if (typeof((window as any).GbComponents) === 'undefined') {
 }
 
 const system: any = (window as any).GbComponents;
+const reset = () => {
+  system.cpu.reset();
+  console.log(system);
+}
 
-system.cpu.reset();
-
-console.log(system);
-
-// Read the file and send it to loadRom()
+// Read the file and send it to loadRom() on file upload
 document.getElementById('fileInput').addEventListener('change', event => {
   const file: File =(event.target as HTMLInputElement).files[0];
   const reader: FileReader = new FileReader();
@@ -23,3 +23,39 @@ document.getElementById('fileInput').addEventListener('change', event => {
   }
   reader.readAsArrayBuffer(file);
 }, false);
+
+const cpu: Cpu = system.cpu;
+const gpu: Gpu = cpu.gpu;
+const mmu: Mmu = cpu.mmu;
+
+const frame = () => {
+  const fclk = system.cpu.clock.t + 70224;
+  do {
+    console.log(cpu.r);
+    console.log(mmu.rb(cpu.r.pc, cpu.r.pc, gpu));
+    cpu.instructionMap[mmu.rb(cpu.r.pc, cpu.r.pc, gpu)]();
+    cpu.r.pc++;
+    cpu.r.pc &= 65535;
+    cpu.clock.m += cpu.r.clock.m;
+    cpu.clock.t += cpu.r.clock.t;
+    gpu.step(cpu.clock.t);
+  } while (cpu.clock.t < fclk);
+}
+
+let interval: any = null;
+const run = () => {
+  if (!interval) {
+    interval = setTimeout(frame, 1);
+    document.getElementById('run').innerHTML = "pause";
+  } else {
+    clearInterval(interval);
+    interval = null;
+    document.getElementById('run').innerHTML = 'run';
+  }
+}
+
+window.onload = () => {
+  document.getElementById('reset').onclick = reset;
+  document.getElementById('run').onclick = run;
+  reset();
+}
