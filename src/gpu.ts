@@ -8,9 +8,9 @@ class Gpu {
   oam: number[] = [];
 
   // http://imrannazar.com/GameBoy-Emulation-in-JavaScript:-GPU-Timings
-  mode: number = 2;         // the current GPU operating mode
-  modeclock: number = 0;    // the number of clocks spent in the current mode
-  line: number = 0;         // the current line being drawn (0xFF44 Read)
+  mode: number = 2; // the current GPU operating mode
+  modeclock: number = 0; // the number of clocks spent in the current mode
+  line: number = 0; // the current line being drawn (0xFF44 Read)
 
   // We have 256+(256/2) = 384 total tiles
   // Each tile consists of 8x8 pixels
@@ -18,10 +18,10 @@ class Gpu {
   // So this holds bg0 and bg1 (the window?)
   tileset: number[][][] = [];
 
-  scy: number = 0;        // 0xFF42: Scroll-Y, RW
-  scx: number = 0;        // 0xFF43: Scroll-X, RW
+  scy: number = 0; // 0xFF42: Scroll-Y, RW
+  scx: number = 0; // 0xFF43: Scroll-X, RW
   // Background palette reg consists of four 2-bit palette entries, emulated here.
-  pal: number[][] = [];   // OXFF47 write?
+  pal: number[][] = []; // OXFF47 write?
 
   // 0xFF40: LCD/GPU control
   // TODO: Figure out exactly what these do an give them better names
@@ -48,37 +48,39 @@ class Gpu {
       this.tileset[i] = [];
       // For each tile (tileset[i]), we have pixel P at point j,k (tileset[i][j][k])
       for (let j = 0; j < 8; j++) {
-        this.tileset[i][j] = [0,0,0,0,0,0,0,0];
+        this.tileset[i][j] = [0, 0, 0, 0, 0, 0, 0, 0];
       }
     }
 
     // We're done if running tests on node
-    if (typeof(document) === 'undefined') {
+    if (typeof document === "undefined") {
       return;
     }
 
     // Then grab the contexts from the DOM and init the canvas
-    const canvas: HTMLCanvasElement = <HTMLCanvasElement> document.getElementById("screen");
+    const canvas: HTMLCanvasElement = <HTMLCanvasElement>(
+      document.getElementById("screen")
+    );
     if (canvas && canvas.getContext) {
       this.ctx = canvas.getContext("2d");
       if (this.ctx) {
         if (this.ctx.createImageData) {
           this.frameBuffer = this.ctx.createImageData(160, 144);
         } else if (this.ctx.getImageData) {
-          this.frameBuffer = this.ctx.getImageData(0,0,160,144);
+          this.frameBuffer = this.ctx.getImageData(0, 0, 160, 144);
         } else {
           // this.frameBuffer = {'width': 160, 'height': 144, 'data': new Array(160 * 144 * 4)};
-          console.error("Could not initialize frameBuffer from canvas!")
+          console.error("Could not initialize frameBuffer from canvas!");
         }
         // Init the canvas to white, then draw it once
-        for(let i = 0; i < 160*144*4; i++) {
+        for (let i = 0; i < 160 * 144 * 4; i++) {
           // This iterates over r, g, b, a channels for each pixel
           this.frameBuffer.data[i] = 255;
         }
         this.ctx.putImageData(this.frameBuffer, 0, 0);
       }
     }
-  }
+  };
 
   // @cpu_t is cpu.r.clock.t, the t time for the last instruction
   step = (cpu_last_t: number) => {
@@ -138,15 +140,15 @@ class Gpu {
         }
         break;
     }
-  }
+  };
 
   renderScanline = () => {
     // VRAM offset for the tile map
-    let mapOffset = this.bgmap ? 0x1C00 : 0x1800;
+    let mapOffset = this.bgmap ? 0x1c00 : 0x1800;
     // Find which line of the tiles to use in the map
     mapOffset += ((this.line + this.scy) & 255) >> 3;
     // Find which tile to start with in the map line
-    let lineOffset = (this.scx >> 3);
+    let lineOffset = this.scx >> 3;
     // Find which line of pixels to use in the tiles
     let y = (this.line + this.scy) & 7;
     // Find where in the tile line to start
@@ -168,10 +170,10 @@ class Gpu {
       // Re-map the tile pixel thru the palette
       color = this.pal[this.tileset[tile][y][x]];
       // Plot the pixel to the canvas framebuf
-      this.frameBuffer.data[canvasOffset+0] = color[0];
-      this.frameBuffer.data[canvasOffset+1] = color[1];
-      this.frameBuffer.data[canvasOffset+2] = color[2];
-      this.frameBuffer.data[canvasOffset+3] = color[3];
+      this.frameBuffer.data[canvasOffset + 0] = color[0];
+      this.frameBuffer.data[canvasOffset + 1] = color[1];
+      this.frameBuffer.data[canvasOffset + 2] = color[2];
+      this.frameBuffer.data[canvasOffset + 3] = color[3];
       canvasOffset += 4;
 
       // When this tile ends, read another
@@ -185,13 +187,13 @@ class Gpu {
         }
       }
     }
-  }
+  };
 
   // Takes a value written to VRAM and udpates the internal tile data set
   // TODO: understand this function
   updateTile = (addr: number) => {
     // Get the "base address" for this tile row
-    addr &= 0x1FFE;
+    addr &= 0x1ffe;
     // Figure out which tile and row was updated
     const tile = (addr >> 4) & 511;
     const y = (addr >> 1) & 7;
@@ -199,54 +201,56 @@ class Gpu {
     let sx = 0;
     for (let x = 0; x < 8; x++) {
       // FInd bit index for this pixel
-      sx = 1 << (7-x);
+      sx = 1 << (7 - x);
       // Then finally update the tile set
-      this.tileset[tile][y][x] = 
-        ((this.vram[addr] & sx) ? 1 : 0) +
-        ((this.vram[addr+1] & sx) ? 2: 0);
+      this.tileset[tile][y][x] =
+        (this.vram[addr] & sx ? 1 : 0) + (this.vram[addr + 1] & sx ? 2 : 0);
     }
-  }
+  };
 
   rb = (addr: number): number => {
     switch (addr) {
       // LCD control
-      case 0xFF40:
-        return  (this.switchbg  ? 0x01 : 0x00) |
-                (this.bgmap     ? 0x08 : 0x00) |
-                (this.bgtile    ? 0x10 : 0x00) |
-                (this.switchlcd ? 0x80 : 0x00);
-      case 0xFF42: 
+      case 0xff40:
+        return (
+          (this.switchbg ? 0x01 : 0x00) |
+          (this.bgmap ? 0x08 : 0x00) |
+          (this.bgtile ? 0x10 : 0x00) |
+          (this.switchlcd ? 0x80 : 0x00)
+        );
+      case 0xff42:
         return this.scy;
-      case 0xFF43:
+      case 0xff43:
         return this.scx;
-      case 0xFF44:
+      case 0xff44:
         return this.line;
       default:
-        console.error("Unimplemented in gbpu#rb"); 
+        console.error("Unimplemented in gbpu#rb");
         return 0;
     }
-  }
+  };
 
   wb = (addr: number, val: number) => {
     switch (addr) {
       // LCD control
-      case 0xFF40:
-        this.switchbg     = (val & 0x01) ? true : false;
-        this.bgmap        = (val & 0x08) ? true : false;
-        this.bgtile       = (val & 0x10) ? true : false;
-        this.switchlcd    = (val & 0x80) ? true : false;
+      case 0xff40:
+        this.switchbg = val & 0x01 ? true : false;
+        this.bgmap = val & 0x08 ? true : false;
+        this.bgtile = val & 0x10 ? true : false;
+        this.switchlcd = val & 0x80 ? true : false;
         break;
-      case 0xFF42: 
+      case 0xff42:
         this.scy = val;
         break;
-      case 0xFF43:
+      case 0xff43:
         this.scx = val;
         break;
       // Background palette
-      case 0xFF47:
+      case 0xff47:
         for (let i = 0; i < 4; i++) {
           // TODO: Understand
-          switch ((val >> (i*2)) & 3) {
+          // prettier-ignore
+          switch ((val >> (i * 2)) & 3) {
             case 0: this.pal[i] = [255, 255, 255, 255]; break;
             case 1: this.pal[i] = [192, 192, 192, 255]; break;
             case 2: this.pal[i] = [ 96,  96,  96,  96]; break;
@@ -257,18 +261,20 @@ class Gpu {
         }
         break;
       default:
-        console.error("Unimplemented in gbpu#wb"); 
+        console.error("Unimplemented in gbpu#wb");
     }
-  }
+  };
 }
 
 // If we're running in the browser, add this component to the window
-if (typeof(window) !== 'undefined') {
+if (typeof window !== "undefined") {
   if ((window as any).GbComponents === undefined) {
     (window as any).GbComponents = {};
   }
   if ((window as any).GbComponents.cpu === undefined) {
-    console.error("Incorrect load order, GPU.js must load after CPU.js is loaded!");
+    console.error(
+      "Incorrect load order, GPU.js must load after CPU.js is loaded!"
+    );
     (window as any).GbComponents.gpu = new Gpu();
   } else {
     // Attach ourselves to the CPU component
@@ -277,6 +283,6 @@ if (typeof(window) !== 'undefined') {
 }
 
 // If we're running under Node, export it for testing
-if(typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = new Gpu();
 }

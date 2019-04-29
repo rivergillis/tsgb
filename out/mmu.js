@@ -35,7 +35,7 @@ var Mmu = (function () {
             _this.inbios = true;
         };
         this.rb = function (addr, pc, gpu) {
-            switch (addr & 0xF000) {
+            switch (addr & 0xf000) {
                 case 0x0000:
                     if (_this.inbios) {
                         if (addr < 0x0100) {
@@ -57,17 +57,17 @@ var Mmu = (function () {
                     return _this.rom[addr];
                 case 0x8000:
                 case 0x9000:
-                    return gpu.vram[addr & 0x1FFF];
-                case 0xA000:
-                case 0xB000:
-                    return _this.eram[addr & 0x1FFF];
-                case 0xC000:
-                case 0xD000:
-                    return _this.wram[addr & 0x1FFF];
-                case 0xE000:
-                    return _this.wram[addr & 0x1FFF];
-                case 0xF000:
-                    switch (addr & 0x0F00) {
+                    return gpu.vram[addr & 0x1fff];
+                case 0xa000:
+                case 0xb000:
+                    return _this.eram[addr & 0x1fff];
+                case 0xc000:
+                case 0xd000:
+                    return _this.wram[addr & 0x1fff];
+                case 0xe000:
+                    return _this.wram[addr & 0x1fff];
+                case 0xf000:
+                    switch (addr & 0x0f00) {
                         case 0x000:
                         case 0x100:
                         case 0x200:
@@ -78,24 +78,24 @@ var Mmu = (function () {
                         case 0x700:
                         case 0x800:
                         case 0x900:
-                        case 0xA00:
-                        case 0xB00:
-                        case 0xC00:
-                        case 0xD00:
-                            return _this.wram[addr & 0x1FFF];
-                        case 0xE00:
-                            if (addr < 0xFEA0) {
-                                return gpu.oam[addr & 0xFF];
+                        case 0xa00:
+                        case 0xb00:
+                        case 0xc00:
+                        case 0xd00:
+                            return _this.wram[addr & 0x1fff];
+                        case 0xe00:
+                            if (addr < 0xfea0) {
+                                return gpu.oam[addr & 0xff];
                             }
                             else {
                                 return 0;
                             }
-                        case 0xF00:
-                            if (addr >= 0xFF80) {
-                                return _this.zram[addr & 0x7F];
+                        case 0xf00:
+                            if (addr >= 0xff80) {
+                                return _this.zram[addr & 0x7f];
                             }
                             else {
-                                switch (addr & 0x00F0) {
+                                switch (addr & 0x00f0) {
                                     case 0x40:
                                     case 0x50:
                                     case 0x60:
@@ -112,7 +112,7 @@ var Mmu = (function () {
             return _this.rb(addr, pc, gpu) + (_this.rb(addr + 1, pc, gpu) << 8);
         };
         this.wb = function (addr, val, pc, gpu) {
-            switch (addr & 0xF000) {
+            switch (addr & 0xf000) {
                 case 0x0000:
                     if (_this.inbios) {
                         if (addr < 0x0100) {
@@ -138,22 +138,22 @@ var Mmu = (function () {
                     break;
                 case 0x8000:
                 case 0x9000:
-                    gpu.vram[addr & 0x1FFF] = val;
+                    gpu.vram[addr & 0x1fff] = val;
                     gpu.updateTile(addr);
                     break;
-                case 0xA000:
-                case 0xB000:
-                    _this.eram[addr & 0x1FFF] = val;
+                case 0xa000:
+                case 0xb000:
+                    _this.eram[addr & 0x1fff] = val;
                     break;
-                case 0xC000:
-                case 0xD000:
-                    _this.wram[addr & 0x1FFF];
+                case 0xc000:
+                case 0xd000:
+                    _this.wram[addr & 0x1fff];
                     break;
-                case 0xE000:
-                    _this.wram[addr & 0x1FFF];
+                case 0xe000:
+                    _this.wram[addr & 0x1fff];
                     break;
-                case 0xF000:
-                    switch (addr & 0x0F00) {
+                case 0xf000:
+                    switch (addr & 0x0f00) {
                         case 0x000:
                         case 0x100:
                         case 0x200:
@@ -164,25 +164,25 @@ var Mmu = (function () {
                         case 0x700:
                         case 0x800:
                         case 0x900:
-                        case 0xA00:
-                        case 0xB00:
-                        case 0xC00:
-                        case 0xD00:
-                            _this.wram[addr & 0x1FFF] = val;
+                        case 0xa00:
+                        case 0xb00:
+                        case 0xc00:
+                        case 0xd00:
+                            _this.wram[addr & 0x1fff] = val;
                             break;
-                        case 0xE00:
-                            if (addr < 0xFEA0) {
-                                gpu.oam[addr & 0xFF] = val;
+                        case 0xe00:
+                            if (addr < 0xfea0) {
+                                gpu.oam[addr & 0xff] = val;
                                 break;
                             }
                             break;
-                        case 0xF00:
-                            if (addr >= 0xFF80) {
-                                _this.zram[addr & 0x7F] = val;
+                        case 0xf00:
+                            if (addr >= 0xff80) {
+                                _this.zram[addr & 0x7f] = val;
                                 break;
                             }
                             else {
-                                switch (addr & 0x00F0) {
+                                switch (addr & 0x00f0) {
                                     case 0x40:
                                     case 0x50:
                                     case 0x60:
@@ -195,15 +195,15 @@ var Mmu = (function () {
                     }
                     break;
                 default:
-                    console.error('Bad write in in mmu#wb');
+                    console.error("Bad write in in mmu#wb");
             }
         };
         this.ww = function (addr, val, pc, gpu) {
-            _this.wb(addr, val & 0xFF, pc, gpu);
+            _this.wb(addr, val & 0xff, pc, gpu);
             _this.wb(addr + 1, val >> 8, pc, gpu);
         };
         this.loadRom = function (data) {
-            console.log('load rom');
+            console.log("load rom");
             _this.rom = [];
             data.forEach(function (val) {
                 _this.rom.push(val);
@@ -213,7 +213,7 @@ var Mmu = (function () {
     }
     return Mmu;
 }());
-if (typeof (window) !== 'undefined') {
+if (typeof window !== "undefined") {
     if (window.GbComponents === undefined) {
         window.GbComponents = {};
     }
@@ -225,7 +225,7 @@ if (typeof (window) !== 'undefined') {
         window.GbComponents.cpu.mmu = new Mmu();
     }
 }
-if (typeof (module) !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
     module.exports = new Mmu();
 }
 //# sourceMappingURL=mmu.js.map
