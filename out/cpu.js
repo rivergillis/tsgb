@@ -22,7 +22,7 @@ var Cpu = (function () {
         };
         this.ADD_byte = function (reg) {
             if (add_byte_regs.indexOf(reg) <= -1) {
-                console.error("Adding reg " + reg + " in ADD_byte, but " + reg + " not an approved reg");
+                console.error("ADD_byte::BADREG " + reg);
                 return;
             }
             _this.r.f = 0;
@@ -43,7 +43,7 @@ var Cpu = (function () {
         };
         this.CP_reg = function (reg) {
             if (compare_reg_regs.indexOf(reg) <= -1) {
-                console.error("Comparing reg " + reg + " in CP_reg, but " + reg + " not an approved reg");
+                console.error("CP_reg::BADREG " + reg);
                 return;
             }
             var i = _this.r.a;
@@ -68,7 +68,7 @@ var Cpu = (function () {
         };
         this.PUSH = function (regs) {
             if (push_pop_regs.indexOf(regs) <= -1) {
-                console.error("Pushing regs " + regs + " in PUSH, but " + regs + " not an approved reg combo");
+                console.error("PUSH::BADREG " + regs);
                 return;
             }
             _this.r.sp--;
@@ -80,7 +80,7 @@ var Cpu = (function () {
         };
         this.POP = function (regs) {
             if (push_pop_regs.indexOf(regs) <= -1) {
-                console.error("Popping regs " + regs + " in POP, but " + regs + " not an approved reg combo");
+                console.error("POP::BADREG " + regs);
                 return;
             }
             _this.r[regs[1]] = _this.mmu.rb(_this.r.sp, _this.r.pc, _this.gpu);
@@ -92,7 +92,7 @@ var Cpu = (function () {
         };
         this.LD_word_imm = function (regs) {
             if (imm_word_ld_regs.indexOf(regs) <= -1) {
-                console.error("Loading imm byte " + regs + " in LD_word_imm, but " + regs + " not an approved reg");
+                console.error("LD_word_imm::BADREG " + regs);
                 return;
             }
             var imm = _this.mmu.rw(_this.r.pc, _this.r.pc, _this.gpu);
@@ -108,6 +108,14 @@ var Cpu = (function () {
             _this.r.clock.t = 12;
         };
         this.LD_byte_imm = function (reg) {
+            if (imm_byte_ld_regs.indexOf(reg) <= -1) {
+                console.error("LD_byte_imm::BADREG " + reg);
+            }
+            var imm = _this.mmu.rb(_this.r.pc, _this.r.pc, _this.gpu);
+            _this.r.pc += 1;
+            _this.r[reg] = imm;
+            _this.r.clock.m = 2;
+            _this.r.clock.t = 8;
         };
         this.reset = function () {
             _this.r.a = 0;
@@ -137,6 +145,16 @@ var Cpu = (function () {
             }
             instrs[0x00] = _this.NOP;
             instrs[0x01] = _this.LD_word_imm.bind(_this, "bc");
+            instrs[0x06] = _this.LD_byte_imm.bind(_this, "b");
+            instrs[0x0e] = _this.LD_byte_imm.bind(_this, "c");
+            instrs[0x11] = _this.LD_word_imm.bind(_this, "de");
+            instrs[0x16] = _this.LD_byte_imm.bind(_this, "d");
+            instrs[0x1e] = _this.LD_byte_imm.bind(_this, "e");
+            instrs[0x21] = _this.LD_word_imm.bind(_this, "hl");
+            instrs[0x26] = _this.LD_byte_imm.bind(_this, "h");
+            instrs[0x2e] = _this.LD_byte_imm.bind(_this, "l");
+            instrs[0x31] = _this.LD_word_imm.bind(_this, "sp");
+            instrs[0x3e] = _this.LD_byte_imm.bind(_this, "a");
             return instrs;
         };
         this.instructionMap = this.buildInstructionMap();

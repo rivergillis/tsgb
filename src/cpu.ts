@@ -60,9 +60,7 @@ class Cpu {
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
     if (add_byte_regs.indexOf(reg) <= -1) {
-      console.error(
-        `Adding reg ${reg} in ADD_byte, but ${reg} not an approved reg`
-      );
+      console.error(`ADD_byte::BADREG ${reg}`);
       return;
     }
 
@@ -98,9 +96,7 @@ class Cpu {
   // Compare B to A, setting flags (CP A, B)
   CP_reg = (reg: string) => {
     if (compare_reg_regs.indexOf(reg) <= -1) {
-      console.error(
-        `Comparing reg ${reg} in CP_reg, but ${reg} not an approved reg`
-      );
+      console.error(`CP_reg::BADREG ${reg}`);
       return;
     }
 
@@ -137,9 +133,7 @@ class Cpu {
   // Push registers @regs[0] and @regs[1] (a word) to the stack (PUSH NN)
   PUSH = (regs: string) => {
     if (push_pop_regs.indexOf(regs) <= -1) {
-      console.error(
-        `Pushing regs ${regs} in PUSH, but ${regs} not an approved reg combo`
-      );
+      console.error(`PUSH::BADREG ${regs}`);
       return;
     }
     // TODO: Use ww?
@@ -157,9 +151,7 @@ class Cpu {
   // Pop registers @regs[0] and @regs[1] (a word) off the stack (POP NN)
   POP = (regs: string) => {
     if (push_pop_regs.indexOf(regs) <= -1) {
-      console.error(
-        `Popping regs ${regs} in POP, but ${regs} not an approved reg combo`
-      );
+      console.error(`POP::BADREG ${regs}`);
       return;
     }
     this.r[regs[1]] = this.mmu.rb(this.r.sp, this.r.pc, this.gpu); // read reg1 at the stack pointer
@@ -174,9 +166,7 @@ class Cpu {
   // Read a byte from absolute location into @reg (LD N, addr)
   LD_word_imm = (regs: string) => {
     if (imm_word_ld_regs.indexOf(regs) <= -1) {
-      console.error(
-        `Loading imm byte ${regs} in LD_word_imm, but ${regs} not an approved reg`
-      );
+      console.error(`LD_word_imm::BADREG ${regs}`);
       return;
     }
     const imm: number = this.mmu.rw(this.r.pc, this.r.pc, this.gpu); // get imm from instr
@@ -196,7 +186,15 @@ class Cpu {
   };
 
   LD_byte_imm = (reg: string) => {
-    // TODO
+    if (imm_byte_ld_regs.indexOf(reg) <= -1) {
+      console.error(`LD_byte_imm::BADREG ${reg}`);
+    }
+    const imm: number = this.mmu.rb(this.r.pc, this.r.pc, this.gpu);
+    this.r.pc += 1; // increment PC past the immediate
+    this.r[reg] = imm;
+
+    this.r.clock.m = 2;
+    this.r.clock.t = 8;
   };
 
   // Reset the CPU (used on startup)
@@ -209,7 +207,7 @@ class Cpu {
     this.r.h = 0;
     this.r.l = 0;
     this.r.f = 0;
-    this.r.sp = 0xfffe;
+    this.r.sp = 0xfffe; // this should be overwritten by programmer
     this.r.pc = 0;
     this.r.clock.m = 0;
     this.r.clock.t = 0;
@@ -232,6 +230,16 @@ class Cpu {
     }
     instrs[0x00] = this.NOP;
     instrs[0x01] = this.LD_word_imm.bind(this, "bc");
+    instrs[0x06] = this.LD_byte_imm.bind(this, "b");
+    instrs[0x0e] = this.LD_byte_imm.bind(this, "c");
+    instrs[0x11] = this.LD_word_imm.bind(this, "de");
+    instrs[0x16] = this.LD_byte_imm.bind(this, "d");
+    instrs[0x1e] = this.LD_byte_imm.bind(this, "e");
+    instrs[0x21] = this.LD_word_imm.bind(this, "hl");
+    instrs[0x26] = this.LD_byte_imm.bind(this, "h");
+    instrs[0x2e] = this.LD_byte_imm.bind(this, "l");
+    instrs[0x31] = this.LD_word_imm.bind(this, "sp");
+    instrs[0x3e] = this.LD_byte_imm.bind(this, "a");
     return instrs;
   };
 
