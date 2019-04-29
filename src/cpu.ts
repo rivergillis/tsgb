@@ -25,6 +25,8 @@ PC should increas by 4 for each instr (maybe not all?)
 SP inc/dec reversed, and also not just by 1?
 */
 
+const byte_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
+const word_regs: string[] = ["bc", "de", "hl"];
 const add_byte_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const compare_reg_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const imm_byte_ld_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
@@ -201,7 +203,7 @@ class Cpu {
   };
 
   // Loads @r1 with the value in @r2
-  // TODO: Support HL
+  // Use LD_byte_mem for instrs that look like LD H, (HL)
   LD_reg = (r1: string, r2: string) => {
     if (ld_reg_regs.indexOf(r1) <= -1 || ld_reg_regs.indexOf(r2) <= -1) {
       console.error(`LD_reg::BADREG ${r1}, ${r2}`);
@@ -210,6 +212,26 @@ class Cpu {
 
     this.r.clock.m = 1;
     this.r.clock.t = 4;
+  };
+
+  // Loads byte specified by (@r2s[0] @r2s[1]) into register @r1 (LD B (HL); LD A (BC))
+  LD_byte_mem = (r1: string, r2s: string) => {
+    if (
+      byte_regs.indexOf(r1) <= -1 ||
+      word_regs.indexOf(r2s) <= -1 ||
+      (r1 !== "a" && r2s !== "h")
+    ) {
+      console.error(`LD_byte_mem::BADREG ${r1}, (${r2s})`);
+    }
+    // In BC, B contains the high byte and C contains the low byte (big endian?)
+    const highByte: number = this.r[r2s[0]] << 8;
+    const lowByte: number = this.r[r2s[1]];
+
+    // Load the byte and assign to the reg
+    this.r[r1] = this.mmu.rb(highByte + lowByte, this.r.pc, this.gpu);
+
+    this.r.clock.m = 2;
+    this.r.clock.t = 8;
   };
 
   // Reset the CPU (used on startup)
@@ -246,9 +268,11 @@ class Cpu {
     instrs[0x00] = this.NOP;
     instrs[0x01] = this.LD_word_imm.bind(this, "bc");
     instrs[0x06] = this.LD_byte_imm.bind(this, "b");
+    instrs[0x0a] = this.LD_byte_mem.bind(this, "a", "bc");
     instrs[0x0e] = this.LD_byte_imm.bind(this, "c");
     instrs[0x11] = this.LD_word_imm.bind(this, "de");
     instrs[0x16] = this.LD_byte_imm.bind(this, "d");
+    instrs[0x1a] = this.LD_byte_mem.bind(this, "a", "de");
     instrs[0x1e] = this.LD_byte_imm.bind(this, "e");
     instrs[0x21] = this.LD_word_imm.bind(this, "hl");
     instrs[0x26] = this.LD_byte_imm.bind(this, "h");
@@ -263,7 +287,7 @@ class Cpu {
     instrs[0x43] = this.LD_reg.bind(this, "b", "e");
     instrs[0x44] = this.LD_reg.bind(this, "b", "h");
     instrs[0x45] = this.LD_reg.bind(this, "b", "l");
-    // TODO: ld_reg HL
+    instrs[0x46] = this.LD_byte_mem.bind(this, "b", "hl");
     instrs[0x47] = this.LD_reg.bind(this, "b", "a");
 
     // LD C, r2
@@ -273,7 +297,7 @@ class Cpu {
     instrs[0x4b] = this.LD_reg.bind(this, "c", "e");
     instrs[0x4c] = this.LD_reg.bind(this, "c", "h");
     instrs[0x4d] = this.LD_reg.bind(this, "c", "l");
-    // TODO: ld_reg HL
+    instrs[0x4e] = this.LD_byte_mem.bind(this, "c", "hl");
     instrs[0x4f] = this.LD_reg.bind(this, "c", "a");
 
     // LD D, r2
@@ -283,7 +307,7 @@ class Cpu {
     instrs[0x53] = this.LD_reg.bind(this, "d", "e");
     instrs[0x54] = this.LD_reg.bind(this, "d", "h");
     instrs[0x55] = this.LD_reg.bind(this, "d", "l");
-    // TODO: ld_reg HL
+    instrs[0x56] = this.LD_byte_mem.bind(this, "d", "hl");
     instrs[0x57] = this.LD_reg.bind(this, "d", "a");
 
     // LD E, r2
@@ -293,7 +317,7 @@ class Cpu {
     instrs[0x5b] = this.LD_reg.bind(this, "e", "e");
     instrs[0x5c] = this.LD_reg.bind(this, "e", "h");
     instrs[0x5d] = this.LD_reg.bind(this, "e", "l");
-    // TODO: ld_reg HL
+    instrs[0x5e] = this.LD_byte_mem.bind(this, "e", "hl");
     instrs[0x5f] = this.LD_reg.bind(this, "e", "a");
 
     // LD H, r2
@@ -303,7 +327,7 @@ class Cpu {
     instrs[0x63] = this.LD_reg.bind(this, "h", "e");
     instrs[0x64] = this.LD_reg.bind(this, "h", "h");
     instrs[0x65] = this.LD_reg.bind(this, "h", "l");
-    // TODO: ld_reg HL
+    instrs[0x66] = this.LD_byte_mem.bind(this, "h", "hl");
     instrs[0x67] = this.LD_reg.bind(this, "h", "a");
 
     // LD L, r2
@@ -313,7 +337,7 @@ class Cpu {
     instrs[0x6b] = this.LD_reg.bind(this, "l", "e");
     instrs[0x6c] = this.LD_reg.bind(this, "l", "h");
     instrs[0x6d] = this.LD_reg.bind(this, "l", "l");
-    // TODO: ld_reg HL
+    instrs[0x6e] = this.LD_byte_mem.bind(this, "l", "hl");
     instrs[0x6f] = this.LD_reg.bind(this, "l", "a");
 
     // TODO(7x-77 except 76 HALT): LD_reg (HL) r2
@@ -325,7 +349,7 @@ class Cpu {
     instrs[0x7b] = this.LD_reg.bind(this, "a", "e");
     instrs[0x7c] = this.LD_reg.bind(this, "a", "h");
     instrs[0x7d] = this.LD_reg.bind(this, "a", "l");
-    // TODO: ld_reg HL
+    instrs[0x7e] = this.LD_byte_mem.bind(this, "a", "hl");
     instrs[0x7f] = this.LD_reg.bind(this, "a", "a");
     return instrs;
   };
