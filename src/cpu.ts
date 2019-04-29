@@ -28,6 +28,7 @@ SP inc/dec reversed, and also not just by 1?
 const add_byte_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const compare_reg_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const imm_byte_ld_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
+const ld_reg_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const imm_word_ld_regs: string[] = ["bc", "de", "hl", "sp"];
 const push_pop_regs: string[] = ["bc", "de", "hl", "af"];
 
@@ -163,7 +164,7 @@ class Cpu {
     this.r.clock.t = 12;
   };
 
-  // Read a byte from absolute location into @reg (LD N, addr)
+  // Read an immediate word into @regs (LD NN, d16)
   LD_word_imm = (regs: string) => {
     if (imm_word_ld_regs.indexOf(regs) <= -1) {
       console.error(`LD_word_imm::BADREG ${regs}`);
@@ -185,6 +186,8 @@ class Cpu {
     this.r.clock.t = 12;
   };
 
+  // Read an immediate byte into @reg (LD N, d8)
+  // TODO: support HL
   LD_byte_imm = (reg: string) => {
     if (imm_byte_ld_regs.indexOf(reg) <= -1) {
       console.error(`LD_byte_imm::BADREG ${reg}`);
@@ -195,6 +198,18 @@ class Cpu {
 
     this.r.clock.m = 2;
     this.r.clock.t = 8;
+  };
+
+  // Loads @r1 with the value in @r2
+  // TODO: Support HL
+  LD_reg = (r1: string, r2: string) => {
+    if (ld_reg_regs.indexOf(r1) <= -1 || ld_reg_regs.indexOf(r2) <= -1) {
+      console.error(`LD_reg::BADREG ${r1}, ${r2}`);
+    }
+    this.r[r1] = this.r[r2];
+
+    this.r.clock.m = 1;
+    this.r.clock.t = 4;
   };
 
   // Reset the CPU (used on startup)
@@ -240,6 +255,78 @@ class Cpu {
     instrs[0x2e] = this.LD_byte_imm.bind(this, "l");
     instrs[0x31] = this.LD_word_imm.bind(this, "sp");
     instrs[0x3e] = this.LD_byte_imm.bind(this, "a");
+
+    // LD B, r2
+    instrs[0x40] = this.LD_reg.bind(this, "b", "b");
+    instrs[0x41] = this.LD_reg.bind(this, "b", "c");
+    instrs[0x42] = this.LD_reg.bind(this, "b", "d");
+    instrs[0x43] = this.LD_reg.bind(this, "b", "e");
+    instrs[0x44] = this.LD_reg.bind(this, "b", "h");
+    instrs[0x45] = this.LD_reg.bind(this, "b", "l");
+    // TODO: ld_reg HL
+    instrs[0x47] = this.LD_reg.bind(this, "b", "a");
+
+    // LD C, r2
+    instrs[0x48] = this.LD_reg.bind(this, "c", "b");
+    instrs[0x49] = this.LD_reg.bind(this, "c", "c");
+    instrs[0x4a] = this.LD_reg.bind(this, "c", "d");
+    instrs[0x4b] = this.LD_reg.bind(this, "c", "e");
+    instrs[0x4c] = this.LD_reg.bind(this, "c", "h");
+    instrs[0x4d] = this.LD_reg.bind(this, "c", "l");
+    // TODO: ld_reg HL
+    instrs[0x4f] = this.LD_reg.bind(this, "c", "a");
+
+    // LD D, r2
+    instrs[0x50] = this.LD_reg.bind(this, "d", "b");
+    instrs[0x51] = this.LD_reg.bind(this, "d", "c");
+    instrs[0x52] = this.LD_reg.bind(this, "d", "d");
+    instrs[0x53] = this.LD_reg.bind(this, "d", "e");
+    instrs[0x54] = this.LD_reg.bind(this, "d", "h");
+    instrs[0x55] = this.LD_reg.bind(this, "d", "l");
+    // TODO: ld_reg HL
+    instrs[0x57] = this.LD_reg.bind(this, "d", "a");
+
+    // LD E, r2
+    instrs[0x58] = this.LD_reg.bind(this, "e", "b");
+    instrs[0x59] = this.LD_reg.bind(this, "e", "c");
+    instrs[0x5a] = this.LD_reg.bind(this, "e", "d");
+    instrs[0x5b] = this.LD_reg.bind(this, "e", "e");
+    instrs[0x5c] = this.LD_reg.bind(this, "e", "h");
+    instrs[0x5d] = this.LD_reg.bind(this, "e", "l");
+    // TODO: ld_reg HL
+    instrs[0x5f] = this.LD_reg.bind(this, "e", "a");
+
+    // LD H, r2
+    instrs[0x60] = this.LD_reg.bind(this, "h", "b");
+    instrs[0x61] = this.LD_reg.bind(this, "h", "c");
+    instrs[0x62] = this.LD_reg.bind(this, "h", "d");
+    instrs[0x63] = this.LD_reg.bind(this, "h", "e");
+    instrs[0x64] = this.LD_reg.bind(this, "h", "h");
+    instrs[0x65] = this.LD_reg.bind(this, "h", "l");
+    // TODO: ld_reg HL
+    instrs[0x67] = this.LD_reg.bind(this, "h", "a");
+
+    // LD L, r2
+    instrs[0x68] = this.LD_reg.bind(this, "l", "b");
+    instrs[0x69] = this.LD_reg.bind(this, "l", "c");
+    instrs[0x6a] = this.LD_reg.bind(this, "l", "d");
+    instrs[0x6b] = this.LD_reg.bind(this, "l", "e");
+    instrs[0x6c] = this.LD_reg.bind(this, "l", "h");
+    instrs[0x6d] = this.LD_reg.bind(this, "l", "l");
+    // TODO: ld_reg HL
+    instrs[0x6f] = this.LD_reg.bind(this, "l", "a");
+
+    // TODO(7x-77 except 76 HALT): LD_reg (HL) r2
+
+    // LD A, r2
+    instrs[0x78] = this.LD_reg.bind(this, "a", "b");
+    instrs[0x79] = this.LD_reg.bind(this, "a", "c");
+    instrs[0x7a] = this.LD_reg.bind(this, "a", "d");
+    instrs[0x7b] = this.LD_reg.bind(this, "a", "e");
+    instrs[0x7c] = this.LD_reg.bind(this, "a", "h");
+    instrs[0x7d] = this.LD_reg.bind(this, "a", "l");
+    // TODO: ld_reg HL
+    instrs[0x7f] = this.LD_reg.bind(this, "a", "a");
     return instrs;
   };
 

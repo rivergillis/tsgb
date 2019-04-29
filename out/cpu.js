@@ -1,6 +1,7 @@
 var add_byte_regs = ["a", "b", "c", "d", "e", "h", "l"];
 var compare_reg_regs = ["a", "b", "c", "d", "e", "h", "l"];
 var imm_byte_ld_regs = ["a", "b", "c", "d", "e", "h", "l"];
+var ld_reg_regs = ["a", "b", "c", "d", "e", "h", "l"];
 var imm_word_ld_regs = ["bc", "de", "hl", "sp"];
 var push_pop_regs = ["bc", "de", "hl", "af"];
 var Cpu = (function () {
@@ -117,6 +118,14 @@ var Cpu = (function () {
             _this.r.clock.m = 2;
             _this.r.clock.t = 8;
         };
+        this.LD_reg = function (r1, r2) {
+            if (ld_reg_regs.indexOf(r1) <= -1 || ld_reg_regs.indexOf(r2) <= -1) {
+                console.error("LD_reg::BADREG " + r1 + ", " + r2);
+            }
+            _this.r[r1] = _this.r[r2];
+            _this.r.clock.m = 1;
+            _this.r.clock.t = 4;
+        };
         this.reset = function () {
             _this.r.a = 0;
             _this.r.b = 0;
@@ -155,6 +164,55 @@ var Cpu = (function () {
             instrs[0x2e] = _this.LD_byte_imm.bind(_this, "l");
             instrs[0x31] = _this.LD_word_imm.bind(_this, "sp");
             instrs[0x3e] = _this.LD_byte_imm.bind(_this, "a");
+            instrs[0x40] = _this.LD_reg.bind(_this, "b", "b");
+            instrs[0x41] = _this.LD_reg.bind(_this, "b", "c");
+            instrs[0x42] = _this.LD_reg.bind(_this, "b", "d");
+            instrs[0x43] = _this.LD_reg.bind(_this, "b", "e");
+            instrs[0x44] = _this.LD_reg.bind(_this, "b", "h");
+            instrs[0x45] = _this.LD_reg.bind(_this, "b", "l");
+            instrs[0x47] = _this.LD_reg.bind(_this, "b", "a");
+            instrs[0x48] = _this.LD_reg.bind(_this, "c", "b");
+            instrs[0x49] = _this.LD_reg.bind(_this, "c", "c");
+            instrs[0x4a] = _this.LD_reg.bind(_this, "c", "d");
+            instrs[0x4b] = _this.LD_reg.bind(_this, "c", "e");
+            instrs[0x4c] = _this.LD_reg.bind(_this, "c", "h");
+            instrs[0x4d] = _this.LD_reg.bind(_this, "c", "l");
+            instrs[0x4f] = _this.LD_reg.bind(_this, "c", "a");
+            instrs[0x50] = _this.LD_reg.bind(_this, "d", "b");
+            instrs[0x51] = _this.LD_reg.bind(_this, "d", "c");
+            instrs[0x52] = _this.LD_reg.bind(_this, "d", "d");
+            instrs[0x53] = _this.LD_reg.bind(_this, "d", "e");
+            instrs[0x54] = _this.LD_reg.bind(_this, "d", "h");
+            instrs[0x55] = _this.LD_reg.bind(_this, "d", "l");
+            instrs[0x57] = _this.LD_reg.bind(_this, "d", "a");
+            instrs[0x58] = _this.LD_reg.bind(_this, "e", "b");
+            instrs[0x59] = _this.LD_reg.bind(_this, "e", "c");
+            instrs[0x5a] = _this.LD_reg.bind(_this, "e", "d");
+            instrs[0x5b] = _this.LD_reg.bind(_this, "e", "e");
+            instrs[0x5c] = _this.LD_reg.bind(_this, "e", "h");
+            instrs[0x5d] = _this.LD_reg.bind(_this, "e", "l");
+            instrs[0x5f] = _this.LD_reg.bind(_this, "e", "a");
+            instrs[0x60] = _this.LD_reg.bind(_this, "h", "b");
+            instrs[0x61] = _this.LD_reg.bind(_this, "h", "c");
+            instrs[0x62] = _this.LD_reg.bind(_this, "h", "d");
+            instrs[0x63] = _this.LD_reg.bind(_this, "h", "e");
+            instrs[0x64] = _this.LD_reg.bind(_this, "h", "h");
+            instrs[0x65] = _this.LD_reg.bind(_this, "h", "l");
+            instrs[0x67] = _this.LD_reg.bind(_this, "h", "a");
+            instrs[0x68] = _this.LD_reg.bind(_this, "l", "b");
+            instrs[0x69] = _this.LD_reg.bind(_this, "l", "c");
+            instrs[0x6a] = _this.LD_reg.bind(_this, "l", "d");
+            instrs[0x6b] = _this.LD_reg.bind(_this, "l", "e");
+            instrs[0x6c] = _this.LD_reg.bind(_this, "l", "h");
+            instrs[0x6d] = _this.LD_reg.bind(_this, "l", "l");
+            instrs[0x6f] = _this.LD_reg.bind(_this, "l", "a");
+            instrs[0x78] = _this.LD_reg.bind(_this, "a", "b");
+            instrs[0x79] = _this.LD_reg.bind(_this, "a", "c");
+            instrs[0x7a] = _this.LD_reg.bind(_this, "a", "d");
+            instrs[0x7b] = _this.LD_reg.bind(_this, "a", "e");
+            instrs[0x7c] = _this.LD_reg.bind(_this, "a", "h");
+            instrs[0x7d] = _this.LD_reg.bind(_this, "a", "l");
+            instrs[0x7f] = _this.LD_reg.bind(_this, "a", "a");
             return instrs;
         };
         this.instructionMap = this.buildInstructionMap();

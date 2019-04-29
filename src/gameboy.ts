@@ -39,12 +39,22 @@ const frame = () => {
   do {
     console.log(cpu.r);
     console.log(`Executing ${mmu.rb(cpu.r.pc, cpu.r.pc, gpu).toString(16)}`);
+
+    // Fetch and decode the instruction
     const instr: Function = cpu.instructionMap[mmu.rb(cpu.r.pc, cpu.r.pc, gpu)];
+
+    // move past the 1-byte opcode
     cpu.r.pc++;
     cpu.r.pc &= 65535;
+
+    // Execute the instruction
     instr();
+
+    // Update the clock. TODO: Should this be kept to 16-bits and overflow?
     cpu.clock.m += cpu.r.clock.m;
     cpu.clock.t += cpu.r.clock.t;
+
+    // Update the PPU
     gpu.step(cpu.clock.t);
   } while (cpu.clock.t < fclk);
 };
