@@ -32,7 +32,7 @@ const frame = () => {
   const fclk = system.cpu.clock.t + 70224;
   do {
     console.log(cpu.r);
-    console.log(mmu.rb(cpu.r.pc, cpu.r.pc, gpu));
+    console.log(`Executing ${mmu.rb(cpu.r.pc, cpu.r.pc, gpu).toString(16)}`);
     const instr: Function = cpu.instructionMap[mmu.rb(cpu.r.pc, cpu.r.pc, gpu)];
     cpu.r.pc++;
     cpu.r.pc &= 65535;

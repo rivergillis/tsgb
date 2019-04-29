@@ -115,10 +115,17 @@ var Cpu = (function () {
             _this.gpu.reset();
             _this.mmu.reset();
         };
+        this.unimplementedFunc = function (idx) {
+            console.error("CPU::Unimplemented function " + idx.toString(16));
+        };
         this.buildInstructionMap = function () {
-            return [
-                _this.NOP, _this.LD_word_imm.bind("bc")
-            ];
+            var instrs = [];
+            for (var i = 0x00; i <= 0xFF; i++) {
+                instrs.push(_this.unimplementedFunc.bind(_this, i));
+            }
+            instrs[0x00] = _this.NOP;
+            instrs[0x01] = _this.LD_word_imm.bind(_this, "bc");
+            return instrs;
         };
         this.instructionMap = this.buildInstructionMap();
     }

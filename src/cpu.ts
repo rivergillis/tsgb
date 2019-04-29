@@ -188,12 +188,18 @@ class Cpu {
     this.mmu.reset();
   }
 
+  unimplementedFunc = (idx: number) => {
+    console.error(`CPU::Unimplemented function ${idx.toString(16)}`)
+  }
+
   buildInstructionMap = (): Function[] => {
-    return [
-      // 0x0x
-      this.NOP, this.LD_word_imm.bind("bc")
-      // 0x1x
-    ];
+    const instrs: Function[] = [];
+    for (let i = 0x00; i <= 0xFF; i++) {
+      instrs.push(this.unimplementedFunc.bind(this, i));
+    }
+    instrs[0x00] = this.NOP;
+    instrs[0x01] = this.LD_word_imm.bind(this, "bc");
+    return instrs;
   }
 
   instructionMap: Function[] = this.buildInstructionMap();
