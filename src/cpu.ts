@@ -60,6 +60,40 @@ class Cpu {
   mmu: Mmu; // need to set this after creating
   gpu: Gpu; // need to set after creating
 
+  // Increments HL if @isInc, else decrements, handles overflow
+  // TODO: Test this
+  inc_dec_hl = (isInc: boolean) => {
+    // Incrementing
+    if (isInc) {
+      // Increment if we don't overflow the low byte
+      if (this.r.l < 0xff) {
+        this.r.l++;
+        return;
+      }
+      // Otherwise increment the high byte and set low byte to 0
+      this.r.h++;
+      this.r.l = 0x00;
+      // Overflow, set both to 0
+      if (this.r.h > 0xff) {
+        this.r.h = 0x00;
+      }
+      return;
+    }
+    // Decrementing
+    // Decrement if we don't underflow the low byte
+    if (this.r.l > 0x00) {
+      this.r.l--;
+      return;
+    }
+    // Otherwise decrement the high byte and set low byte to 0xFF
+    this.r.h--;
+    this.r.l = 0xff;
+    // Overflow, set both to 0xFF
+    if (this.r.h < 0x00) {
+      this.r.h = 0xff;
+    }
+  };
+
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
     if (add_byte_regs.indexOf(reg) <= -1) {
@@ -215,7 +249,7 @@ class Cpu {
   };
 
   // Stores @reg into the memory location specified by (HL) (LD (HL) B)
-  // TODO: Add STORE_mem_imm, STORE_mem_reg_inc_dec(bool isInc)
+  // TODO: Add STORE_mem_imm, STORE_mem_acc_inc_dec(bool isInc)
   STORE_mem_reg = (reg: string) => {
     if (byte_regs.indexOf(reg) <= -1) {
       console.error(`STORE_mem_reg::BADREG ${reg}`);
@@ -229,7 +263,14 @@ class Cpu {
     this.r.clock = { m: 2, t: 8 };
   };
 
+  // Stores A into (HL), then increments or decrements HL
+  STORE_mem_acc_inc_dec = (isInc: boolean) => {
+    this.STORE_mem_reg("a");
+    this.inc_dec_hl(isInc);
+  };
+
   // Loads byte specified by (@r2s[0] @r2s[1]) into register @r1 (LD B (HL); LD A (BC))
+  // TODO: Support LD A (HL+/-) via LD_byte_mem_inc_dec(bool isInc)
   LD_byte_mem = (r1: string, r2s: string) => {
     if (
       byte_regs.indexOf(r1) <= -1 ||
@@ -275,6 +316,7 @@ class Cpu {
     console.error(`CPU::Unimplemented function ${idx.toString(16)}`);
   };
 
+  // TODO: Implement XOR and figure out the updateTile bug
   buildInstructionMap = (): Function[] => {
     const instrs: Function[] = [];
     for (let i = 0x00; i <= 0xff; i++) {
@@ -290,9 +332,11 @@ class Cpu {
     instrs[0x1a] = this.LD_byte_mem.bind(this, "a", "de");
     instrs[0x1e] = this.LD_byte_imm.bind(this, "e");
     instrs[0x21] = this.LD_word_imm.bind(this, "hl");
+    instrs[0x22] = this.STORE_mem_acc_inc_dec.bind(this, true);
     instrs[0x26] = this.LD_byte_imm.bind(this, "h");
     instrs[0x2e] = this.LD_byte_imm.bind(this, "l");
     instrs[0x31] = this.LD_word_imm.bind(this, "sp");
+    instrs[0x32] = this.STORE_mem_acc_inc_dec.bind(this, false);
     instrs[0x3e] = this.LD_byte_imm.bind(this, "a");
 
     // LD B, r2
