@@ -146,9 +146,8 @@ class Cpu {
     this.mmu.wb(this.r.sp, this.r[regs[1]], this.r.pc, this.gpu); // write reg1 at the stack pointer
 
     // Three M-times taken
-    // TODO: Should this be 16?
-    this.r.clock.m = 3;
-    this.r.clock.t = 12;
+    this.r.clock.m = 4;
+    this.r.clock.t = 16;
   };
 
   // Pop registers @regs[0] and @regs[1] (a word) off the stack (POP NN)
@@ -189,7 +188,7 @@ class Cpu {
   };
 
   // Read an immediate byte into @reg (LD N, d8)
-  // TODO: support HL
+  // TODO: support HL (Ld_mem_imm) (LD (HL) d8)
   LD_byte_imm = (reg: string) => {
     if (imm_byte_ld_regs.indexOf(reg) <= -1) {
       console.error(`LD_byte_imm::BADREG ${reg}`);
@@ -204,6 +203,7 @@ class Cpu {
 
   // Loads @r1 with the value in @r2
   // Use LD_byte_mem for instrs that look like LD H, (HL)
+  // Mem equiv would be Ld_mem_reg (LD (HL) C)
   LD_reg = (r1: string, r2: string) => {
     if (ld_reg_regs.indexOf(r1) <= -1 || ld_reg_regs.indexOf(r2) <= -1) {
       console.error(`LD_reg::BADREG ${r1}, ${r2}`);
@@ -212,6 +212,21 @@ class Cpu {
 
     this.r.clock.m = 1;
     this.r.clock.t = 4;
+  };
+
+  // Stores @reg into the memory location specified by (HL) (LD (HL) B)
+  // TODO: Add STORE_mem_imm, STORE_mem_reg_inc_dec(bool isInc)
+  STORE_mem_reg = (reg: string) => {
+    if (byte_regs.indexOf(reg) <= -1) {
+      console.error(`STORE_mem_reg::BADREG ${reg}`);
+    }
+    // H stores the high-byte, L stores the low-byte
+    const highByte = this.r.h << 8;
+    const lowByte = this.r.l;
+    const valToWrite = this.r[reg];
+    this.mmu.wb(highByte + lowByte, valToWrite, this.r.pc, this.gpu);
+
+    this.r.clock = { m: 2, t: 8 };
   };
 
   // Loads byte specified by (@r2s[0] @r2s[1]) into register @r1 (LD B (HL); LD A (BC))
@@ -340,7 +355,15 @@ class Cpu {
     instrs[0x6e] = this.LD_byte_mem.bind(this, "l", "hl");
     instrs[0x6f] = this.LD_reg.bind(this, "l", "a");
 
-    // TODO(7x-77 except 76 HALT): LD_reg (HL) r2
+    // LD (HL) r
+    instrs[0x70] = this.STORE_mem_reg.bind(this, "b");
+    instrs[0x71] = this.STORE_mem_reg.bind(this, "c");
+    instrs[0x72] = this.STORE_mem_reg.bind(this, "d");
+    instrs[0x73] = this.STORE_mem_reg.bind(this, "e");
+    instrs[0x74] = this.STORE_mem_reg.bind(this, "h");
+    instrs[0x75] = this.STORE_mem_reg.bind(this, "l");
+    // 0x76 HALT
+    instrs[0x77] = this.STORE_mem_reg.bind(this, "a");
 
     // LD A, r2
     instrs[0x78] = this.LD_reg.bind(this, "a", "b");

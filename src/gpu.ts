@@ -225,7 +225,7 @@ class Gpu {
       case 0xff44:
         return this.line;
       default:
-        console.error("Unimplemented in gbpu#rb");
+        console.error("Unimplemented in gb#rb");
         return 0;
     }
   };
