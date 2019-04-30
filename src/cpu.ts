@@ -146,7 +146,7 @@ class Cpu {
     this.mmu.wb(this.r.sp, this.r[regs[1]], this.r.pc, this.gpu); // write reg1 at the stack pointer
 
     // Three M-times taken
-    // TODO: Should this be 1 and 16?
+    // TODO: Should this be 16?
     this.r.clock.m = 3;
     this.r.clock.t = 12;
   };
