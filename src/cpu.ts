@@ -446,6 +446,43 @@ class Cpu {
     this.set_instr_clock(8);
   };
 
+  //// CB PREFIX INSTRUCTIONS
+
+  // Test if bit at @bit_idx in register @reg is 0, sets Z flag if it is. (BIT 3 C)
+  // For (BIT 3 (HL)) use BIT_mem
+  BIT_reg = (bit_idx: number, reg: string) => {
+    if (bit_idx < 0 || bit_idx > 7 || byte_regs.indexOf(reg) <= -1) {
+      ERR(`BIT_reg::BADARGS bit_idx: ${bit_idx} reg: ${reg}`);
+    }
+    LOGI(`BIT ${bit_idx}, ${reg}`);
+
+    const mask: number = 1 << bit_idx;
+    const flags: FlagOptions = { z: false, n: false, h: true };
+    if ((this.r[reg] & mask) === 0) {
+      flags.z = true;
+    }
+    this.set_flags(flags);
+    this.set_instr_clock(8);
+  };
+
+  // Test if bit at @bit_idx in byte at (HL) is 0, sets Z flag if it is. (BIT 3 (HL))
+  BIT_mem = (bit_idx: number) => {
+    if (bit_idx < 0 || bit_idx > 7) {
+      ERR(`BIT_reg::BADARGS bit_idx: ${bit_idx}`);
+    }
+    LOGI(`BIT ${bit_idx}, (HL)`);
+
+    const mask: number = 1 << bit_idx;
+    const addr = this.word_from_regs("hl");
+    const byte = this.mmu.rb(addr, this.r.pc, this.gpu);
+    const flags: FlagOptions = { z: false, n: false, h: true };
+    if ((byte & mask) === 0) {
+      flags.z = true;
+    }
+    this.set_flags(flags);
+    this.set_instr_clock(16);
+  };
+
   // Reset the CPU (used on startup)
   reset = () => {
     this.r.a = 0;
@@ -591,6 +628,21 @@ class Cpu {
     instrs[0xee] = this.XOR_imm.bind(this);
 
     // CB Prefix instructions...
+
+    // Instrs 0xcb40 to 0xcb80 are BIT
+    let current_bit: number = 0;
+    let current_instr = 0xcb40;
+    while (current_instr < 0xcb7f) {
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "b");
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "c");
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "d");
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "e");
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "h");
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "l");
+      instrs[current_instr++] = this.BIT_mem.bind(this, current_bit);
+      instrs[current_instr++] = this.BIT_reg.bind(this, current_bit, "a");
+      current_bit++;
+    }
 
     return instrs;
   };

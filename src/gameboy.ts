@@ -71,7 +71,7 @@
       if (addr === undefined) {
         ERR(`UNDEFINED INSTR AT PC ${cpu.r.pc - 1}`);
       } else {
-        LOGI(
+        LOGV(
           `PC(${(cpu.r.pc - 1).toString(16)}) Executing ${addr.toString(16)}`
         );
       }
