@@ -1,9 +1,14 @@
 var LOG = (s?: any) => {
   console.log(s);
 };
-
 var ERR = (s?: any) => {
   console.error(s);
+};
+var LOGI = (s?: any) => {
+  console.info(s);
+};
+var LOGV = (s?: any) => {
+  console.debug(s);
 };
 
 class Mmu {

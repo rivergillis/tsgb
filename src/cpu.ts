@@ -1,9 +1,14 @@
 var LOG = (s?: any) => {
   console.log(s);
 };
-
 var ERR = (s?: any) => {
   console.error(s);
+};
+var LOGI = (s?: any) => {
+  console.info(s);
+};
+var LOGV = (s?: any) => {
+  console.debug(s);
 };
 
 interface Clock {
@@ -49,6 +54,7 @@ const imm_byte_ld_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const ld_reg_regs: string[] = ["a", "b", "c", "d", "e", "h", "l"];
 const imm_word_ld_regs: string[] = ["bc", "de", "hl", "sp"];
 const push_pop_regs: string[] = ["bc", "de", "hl", "af"];
+const word_regs_full: string[] = ["bc", "de", "hl", "sp", "af"];
 
 /*
 cpu = new Cpu();
@@ -146,12 +152,22 @@ class Cpu {
     this.r.clock = { t: t, m: Math.floor(t / 4) };
   };
 
+  word_from_regs = (regs: string): number => {
+    if (word_regs_full.indexOf(regs) <= -1) {
+      ERR(`WORD_FROM_REGS::BADREG ${regs}`);
+    }
+    const highByte = this.r[regs[0]] << 8;
+    const lowByte = this.r[regs[1]];
+    return highByte + lowByte;
+  };
+
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
     if (add_byte_regs.indexOf(reg) <= -1) {
       ERR(`ADD_byte::BADREG ${reg}`);
       return;
     }
+    LOGI(`ADD A, ${reg}`);
 
     // Clear the flags
     this.r.f = 0;
@@ -188,6 +204,7 @@ class Cpu {
       ERR(`CP_reg::BADREG ${reg}`);
       return;
     }
+    LOGI(`CP A, ${reg}`);
 
     let i: number = this.r.a; // temp copy of A
     i -= this.r[reg]; // sub reg from copy of A
@@ -214,6 +231,7 @@ class Cpu {
 
   // No-operation
   NOP = () => {
+    LOGI(`NOP`);
     // 1 M-time taken
     this.r.clock.m = 1;
     this.r.clock.t = 4;
@@ -225,7 +243,9 @@ class Cpu {
       ERR(`PUSH::BADREG ${regs}`);
       return;
     }
-    // TODO: Use ww?
+    LOGI(`PUSH ${regs}`);
+
+    // Use ww?
     this.r.sp--; // drop through the stack;
     this.mmu.wb(this.r.sp, this.r[regs[0]], this.r.pc, this.gpu); // Write reg0 at the stack pointer
     this.r.sp--; // drop through the stack;
@@ -242,6 +262,8 @@ class Cpu {
       ERR(`POP::BADREG ${regs}`);
       return;
     }
+    LOGI(`POP ${regs}`);
+
     this.r[regs[1]] = this.mmu.rb(this.r.sp, this.r.pc, this.gpu); // read reg1 at the stack pointer
     this.r.sp++; // move back up the stack
     this.r[regs[0]] = this.mmu.rb(this.r.sp, this.r.pc, this.gpu); // read reg0 at the stack pointer
@@ -258,6 +280,8 @@ class Cpu {
       return;
     }
     const imm: number = this.mmu.rw(this.r.pc, this.r.pc, this.gpu); // get imm from instr
+    LOGI(`LD ${regs}, ${imm.toString(16)}`);
+
     this.r.pc += 2; // advance PC twice bc 3-byte instr
     if (regs == "sp") {
       // If we're storing the 16-byte imm in the 16-byte stack pointer, do that
@@ -274,12 +298,14 @@ class Cpu {
   };
 
   // Read an immediate byte into @reg (LD N, d8)
-  // TODO: support HL (Ld_mem_imm) (LD (HL) d8)
+  // For (LD (HL) d8), use STORE_hl_imm
   LD_byte_imm = (reg: string) => {
     if (imm_byte_ld_regs.indexOf(reg) <= -1) {
       ERR(`LD_byte_imm::BADREG ${reg}`);
     }
     const imm: number = this.mmu.rb(this.r.pc, this.r.pc, this.gpu);
+    LOGI(`LD ${reg}, ${imm.toString(16)}`);
+
     this.r.pc += 1; // increment PC past the immediate
     this.r[reg] = imm;
 
@@ -287,13 +313,30 @@ class Cpu {
     this.r.clock.t = 8;
   };
 
-  // Loads @r1 with the value in @r2
-  // Use LD_byte_mem for instrs that look like LD H, (HL)
-  // Mem equiv would be Ld_mem_reg (LD (HL) C)
+  // Stores byte immediate into mem specified by (HL)
+  // LD (HL), d8
+  STORE_hl_imm = () => {
+    const imm: number = this.mmu.rb(this.r.pc, this.r.pc, this.gpu);
+    this.r.pc += 1; // increment PC past the immediate (Does this need to go after the wb?)
+
+    LOGI(`LD (HL), ${imm.toString(16)} (STORE_hl_imm)`);
+
+    // H stores the high-byte, L stores the low-byte
+    const highByte = this.r.h << 8;
+    const lowByte = this.r.l;
+    this.mmu.wb(highByte + lowByte, imm, this.r.pc, this.gpu);
+
+    this.set_instr_clock(12);
+  };
+
+  // Loads @r1 with the value in @r2 (LD B, C)
+  // For (LD H, (HL)), use LD_byte_mem
+  // For (LD (HL), C), use STORE_mem_reg
   LD_reg = (r1: string, r2: string) => {
     if (ld_reg_regs.indexOf(r1) <= -1 || ld_reg_regs.indexOf(r2) <= -1) {
       ERR(`LD_reg::BADREG ${r1}, ${r2}`);
     }
+    LOGI(`LD ${r1}, ${r2}`);
     this.r[r1] = this.r[r2];
 
     this.r.clock.m = 1;
@@ -302,11 +345,13 @@ class Cpu {
 
   // Stores @reg into the memory location specified by (HL) (LD (HL) B)
   // For LD (HL) A with inc/dec, use STORE_mem_acc_inc_dec(bool isInc)
-  // TODO: Add STORE_mem_imm
+  // FOr (LD (HL) d8) use STORE_hl_imm
   STORE_mem_reg = (reg: string) => {
     if (byte_regs.indexOf(reg) <= -1) {
       ERR(`STORE_mem_reg::BADREG ${reg}`);
     }
+    LOGI(`LD (HL), ${reg} (STORE_mem_reg)`);
+
     // H stores the high-byte, L stores the low-byte
     const highByte = this.r.h << 8;
     const lowByte = this.r.l;
@@ -316,22 +361,23 @@ class Cpu {
     this.r.clock = { m: 2, t: 8 };
   };
 
-  // Stores A into (HL), then increments or decrements HL
+  // Stores A into (HL), then increments or decrements HL (LD (HL+/-), A)
+  // For (LD A, (HL+/-)) use LD_acc_hl_inc_dec(isInc)
   STORE_mem_acc_inc_dec = (isInc: boolean) => {
     this.STORE_mem_reg("a");
+    LOGI(`...(with isInc: ${isInc})`);
     this.inc_dec_hl(isInc);
   };
 
-  // Loads byte specified by (@r2s[0] @r2s[1]) into register @r1 (LD B (HL); LD A (BC))
-  // TODO: Support LD A (HL+/-) via LD_byte_mem_inc_dec(bool isInc)
+  // Loads byte in mem specified by (@r2s[0] @r2s[1]) into register @r1 (LD B (HL); LD A (BC))
+  // For (LD A (HL+/-)) use LD_acc_hl_inc_dec(bool isInc)
   LD_byte_mem = (r1: string, r2s: string) => {
-    if (
-      byte_regs.indexOf(r1) <= -1 ||
-      word_regs.indexOf(r2s) <= -1 ||
-      (r1 !== "a" && r2s !== "h")
-    ) {
+    // || (r1 !== "a" && r2s !== "h") ???
+    if (byte_regs.indexOf(r1) <= -1 || word_regs.indexOf(r2s) <= -1) {
       ERR(`LD_byte_mem::BADREG ${r1}, (${r2s})`);
     }
+    LOGI(`LD ${r1}, (${r2s})`);
+
     // In BC, B contains the high byte and C contains the low byte (big endian?)
     const highByte: number = this.r[r2s[0]] << 8;
     const lowByte: number = this.r[r2s[1]];
@@ -343,12 +389,20 @@ class Cpu {
     this.r.clock.t = 8;
   };
 
+  LD_acc_hl_inc_dec = (isInc: boolean) => {
+    this.LD_byte_mem("a", "hl");
+    LOGI(`...(with isInc: ${isInc})`);
+    this.inc_dec_hl(isInc);
+  };
+
   // Bitwise XORs the register @r with A, then stores result back into A
-  // TODO: Implement XOR_mem (HL) and XOR_imm (d8)
+  // For XOR (HL) use XOR_mem and for XOR d8 use XOR_imm
   XOR_reg = (reg: string) => {
     if (byte_regs.indexOf(reg) <= -1) {
       LOG(`XOR_reg::BADREG ${reg}`);
     }
+    LOGI(`XOR A, (${reg})`);
+
     this.r.a ^= this.r[reg];
     const flags: FlagOptions = { z: false, n: false, h: false, c: false };
     if (this.r.a === 0x00) {
@@ -356,6 +410,36 @@ class Cpu {
     }
     this.set_flags(flags);
     this.set_instr_clock(4);
+  };
+
+  // Bitwise XORs the register the byte pointed at by (HL) with A, then stores result back into A
+  XOR_mem = () => {
+    LOGI(`XOR A, (HL)`);
+    const addr = this.word_from_regs("hl");
+    const byte = this.mmu.rb(addr, this.r.pc, this.gpu);
+    this.r.a ^= byte;
+
+    const flags: FlagOptions = { z: false, n: false, h: false, c: false };
+    if (this.r.a === 0x00) {
+      flags.z = true;
+    }
+    this.set_flags(flags);
+    this.set_instr_clock(8);
+  };
+  // Bitwise XORs the immediate byte with A, then stores result back into A
+  XOR_imm = () => {
+    const imm = this.mmu.rb(this.r.pc, this.r.pc, this.gpu);
+    this.r.pc++;
+
+    LOGI(`XOR A, ${imm}`);
+    this.r.a ^= imm;
+
+    const flags: FlagOptions = { z: false, n: false, h: false, c: false };
+    if (this.r.a === 0x00) {
+      flags.z = true;
+    }
+    this.set_flags(flags);
+    this.set_instr_clock(8);
   };
 
   // Reset the CPU (used on startup)
@@ -390,7 +474,7 @@ class Cpu {
     for (let i = 0x00; i <= 0xff; i++) {
       instrs.push(this.unimplementedFunc.bind(this, i));
     }
-    instrs[0x00] = this.NOP;
+    instrs[0x00] = this.NOP.bind(this);
     instrs[0x01] = this.LD_word_imm.bind(this, "bc");
     instrs[0x06] = this.LD_byte_imm.bind(this, "b");
     instrs[0x0a] = this.LD_byte_mem.bind(this, "a", "bc");
@@ -402,9 +486,12 @@ class Cpu {
     instrs[0x21] = this.LD_word_imm.bind(this, "hl");
     instrs[0x22] = this.STORE_mem_acc_inc_dec.bind(this, true);
     instrs[0x26] = this.LD_byte_imm.bind(this, "h");
+    instrs[0x2a] = this.LD_acc_hl_inc_dec.bind(this, true);
     instrs[0x2e] = this.LD_byte_imm.bind(this, "l");
     instrs[0x31] = this.LD_word_imm.bind(this, "sp");
     instrs[0x32] = this.STORE_mem_acc_inc_dec.bind(this, false);
+    instrs[0x3a] = this.LD_acc_hl_inc_dec.bind(this, false);
+    instrs[0x36] = this.STORE_hl_imm.bind(this);
     instrs[0x3e] = this.LD_byte_imm.bind(this, "a");
 
     // LD B, r2
@@ -494,8 +581,10 @@ class Cpu {
     instrs[0xab] = this.XOR_reg.bind(this, "e");
     instrs[0xac] = this.XOR_reg.bind(this, "h");
     instrs[0xad] = this.XOR_reg.bind(this, "l");
-    // XOR (HL)
+    instrs[0xae] = this.XOR_mem.bind(this);
     instrs[0xaf] = this.XOR_reg.bind(this, "a");
+
+    instrs[0xee] = this.XOR_imm.bind(this);
 
     return instrs;
   };

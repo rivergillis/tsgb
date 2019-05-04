@@ -2,9 +2,14 @@
   var LOG = (s?: any) => {
     console.log(s);
   };
-
   var ERR = (s?: any) => {
     console.error(s);
+  };
+  var LOGI = (s?: any) => {
+    console.info(s);
+  };
+  var LOGV = (s?: any) => {
+    console.debug(s);
   };
 
   if (typeof window === "undefined") {
@@ -47,8 +52,13 @@
     const t0 = performance.now();
     let num_instrs = 0;
     do {
-      LOG(cpu.r);
-      LOG(`Executing ${mmu.rb(cpu.r.pc, cpu.r.pc, gpu).toString(16)}`);
+      LOGV(cpu.r);
+      const addr = mmu.rb(cpu.r.pc, cpu.r.pc, gpu);
+      if (addr === undefined) {
+        ERR(`UNDEFINED INSTR AT PC ${cpu.r.pc}`);
+      } else {
+        LOGV(`PC(${cpu.r.pc.toString(16)}) Executing ${addr.toString(16)}`);
+      }
 
       // Fetch and decode the instruction
       const instr: Function =
@@ -71,8 +81,7 @@
       // LOG(fclk - cpu.clock.t);
     } while (cpu.clock.t < fclk / 250); // just execute a little bit for now
     const t1 = performance.now();
-    console.log(t1 - t0);
-    console.log(num_instrs);
+    LOG(`took ${t1 - t0}ms to execute ${num_instrs} instructions`);
   };
 
   let interval: any = null;

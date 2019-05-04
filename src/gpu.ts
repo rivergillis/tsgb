@@ -1,9 +1,14 @@
 var LOG = (s?: any) => {
   console.log(s);
 };
-
 var ERR = (s?: any) => {
   console.error(s);
+};
+var LOGI = (s?: any) => {
+  console.info(s);
+};
+var LOGV = (s?: any) => {
+  console.debug(s);
 };
 
 // TODO: Change mode to be stringly typed or enum
@@ -212,14 +217,14 @@ class Gpu {
   // Takes a value written to VRAM and udpates the internal tile data set
   // TODO: understand this function
   updateTile = (addr: number) => {
-    LOG(`updating tile at addr ${addr.toString(16)}`);
+    LOGV(`updating tile at addr ${addr.toString(16)}`);
     // Get the "base address" for this tile row
     addr &= 0x1ffe;
     // Figure out which tile and row was updated
     const tile = (addr >> 4) & 511;
     const y = (addr >> 1) & 7;
 
-    LOG(`tile ${tile.toString(16)} and row(y) ${y.toString(16)}`);
+    LOGV(`tile ${tile.toString(16)} and row(y) ${y.toString(16)}`);
 
     let sx = 0;
     for (let x = 0; x < 8; x++) {
@@ -229,7 +234,7 @@ class Gpu {
       this.tileset[tile][y][x] =
         (this.vram[addr] & sx ? 1 : 0) + (this.vram[addr + 1] & sx ? 2 : 0);
     }
-    LOG(this.tileset[y]);
+    LOGV(this.tileset[y]);
   };
 
   rb = (addr: number): number => {
