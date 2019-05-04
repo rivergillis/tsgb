@@ -8,7 +8,7 @@ describe("gpu", function() {
     gpu.reset();
   });
   describe("#step", function() {
-    it("should through each mode with correct timings", function() {
+    it("should step through each mode with correct timings", function() {
       assert.equal(gpu.mode, 2);
       assert.equal(gpu.line, 0);
       gpu.step(12);

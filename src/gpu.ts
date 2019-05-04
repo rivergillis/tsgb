@@ -13,6 +13,7 @@ class Gpu {
   line: number = 0; // the current line being drawn (0xFF44 Read)
 
   // We have 256+(256/2) = 384 total tiles
+  // Okay but we're gonna emulate with 256+256=512 tiles I guess?
   // Each tile consists of 8x8 pixels
   // For each tile (tileset[i]), we have pixel P at point x,y (tileset[i][y][x])
   // So this holds bg0 and bg1 (the window?)
@@ -44,7 +45,7 @@ class Gpu {
 
     // Clear the tileset
     this.tileset = [];
-    for (let i = 0; i < 384; i++) {
+    for (let i = 0; i < 512; i++) {
       this.tileset[i] = [];
       // For each tile (tileset[i]), we have pixel P at point j,k (tileset[i][j][k])
       for (let j = 0; j < 8; j++) {
@@ -92,6 +93,7 @@ class Gpu {
           // Enter scanline mode 3 (vram), this mode is done
           this.modeclock = 0;
           this.mode = 3;
+          console.log("enter vram");
         }
         break;
       // VRAM read mode, scanline is active
@@ -101,6 +103,7 @@ class Gpu {
           // Scanline ends, enter hblank mode
           this.modeclock = 0;
           this.mode = 0;
+          console.log("hblank vram, render line");
           // Write a scanline to the framebuffer since we just finished it
           this.renderScanline();
         }
@@ -114,11 +117,13 @@ class Gpu {
           if (this.line === 143) {
             // Enter vblank mode since we hit the last line, and write the framebuffer
             this.mode = 1;
+            console.log("screen done, draw and enter vblank");
             if (this.ctx.putImageData) {
               this.ctx.putImageData(this.frameBuffer, 0, 0);
             }
           } else {
             // Otherwise go back to OAM read mode for the start of the line
+            console.log("line done, enter oam");
             this.mode = 2;
           }
         }
@@ -133,6 +138,7 @@ class Gpu {
           // 10 lines beyond the last line, is this the best way to do this?
           // TODO: Also, should this be >= 153?
           if (this.line > 153) {
+            console.log("vblank done, enter oam");
             // Restart scanning modes, go to OAM read
             this.mode = 2;
             this.line = 0;
@@ -192,20 +198,24 @@ class Gpu {
   // Takes a value written to VRAM and udpates the internal tile data set
   // TODO: understand this function
   updateTile = (addr: number) => {
+    console.log(`updating tile at addr ${addr.toString(16)}`);
     // Get the "base address" for this tile row
     addr &= 0x1ffe;
     // Figure out which tile and row was updated
     const tile = (addr >> 4) & 511;
     const y = (addr >> 1) & 7;
 
+    console.log(`tile ${tile.toString(16)} and row(y) ${y.toString(16)}`);
+
     let sx = 0;
     for (let x = 0; x < 8; x++) {
-      // FInd bit index for this pixel
-      sx = 1 << (7 - x);
+      sx = 1 << (7 - x); // this is just the bit mask used for the current pixel
       // Then finally update the tile set
+      // If the vram pixel low byte is set, make it 1. If high byte, 2. If pixel word set, 3.
       this.tileset[tile][y][x] =
         (this.vram[addr] & sx ? 1 : 0) + (this.vram[addr + 1] & sx ? 2 : 0);
     }
+    console.log(this.tileset[y]);
   };
 
   rb = (addr: number): number => {

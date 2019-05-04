@@ -24,7 +24,7 @@ describe("cpu", function() {
         l: 0,
         f: 0,
         pc: 0,
-        sp: 0,
+        sp: 0xfffe,
         clock: { m: 0, t: 0 }
       });
     });
@@ -114,10 +114,10 @@ describe("cpu", function() {
       cpu.PUSH("hl"); // PUSH h, l
       assert.strictEqual(cpu.r.sp, originalStackPointer - 2);
     });
-    it("Should take 3 M-times", function() {
+    it("Should take 4 M-times", function() {
       cpu.r.sp = 100;
       cpu.PUSH("bc"); // PUSH B, C
-      assert.deepStrictEqual(cpu.r.clock, { m: 3, t: 12 });
+      assert.deepStrictEqual(cpu.r.clock, { m: 4, t: 16 });
     });
   });
   describe("#POP", function() {
@@ -127,17 +127,17 @@ describe("cpu", function() {
       cpu.POP("de"); // POP D, E
       assert.strictEqual(cpu.r.sp, originalStackPointer + 2);
     });
-    it("Should take 3 M-times", function() {
+    it("Should take 4 M-times", function() {
       cpu.r.sp = 100;
       cpu.PUSH("af"); // PUSH A, F
-      assert.deepStrictEqual(cpu.r.clock, { m: 3, t: 12 });
+      assert.deepStrictEqual(cpu.r.clock, { m: 4, t: 16 });
     });
   });
   describe("#LD_byte_imm", function() {
-    it("Should take 4 M-times", function() {
+    it("Should take 2 M-times", function() {
       cpu.LD_byte_imm("e");
       // TODO: set the pc or something before doing that?
-      assert.deepStrictEqual(cpu.r.clock, { m: 4, t: 16 });
+      assert.deepStrictEqual(cpu.r.clock, { m: 2, t: 8 });
     });
   });
 });

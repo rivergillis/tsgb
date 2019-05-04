@@ -20,6 +20,14 @@ interface RegFile {
   [key: string]: any;
 }
 
+// If you don't specify a flag, it is not affected
+interface FlagOptions {
+  z?: boolean;
+  n?: boolean;
+  h?: boolean;
+  c?: boolean;
+}
+
 /* I think:
 PC should increas by 4 for each instr (maybe not all?)
 SP inc/dec reversed, and also not just by 1?
@@ -92,6 +100,42 @@ class Cpu {
     if (this.r.h < 0x00) {
       this.r.h = 0xff;
     }
+  };
+
+  set_flags = ({ z, n, h, c }: FlagOptions) => {
+    // For each flag, we want to set bit if flag is true, or remove it if flag is false
+    // This preserves undefined flags.
+    // Zero
+    if (z === true) {
+      this.r.f |= 0x80;
+    } else if (z === false) {
+      this.r.f &= ~0x80;
+    }
+
+    // subtraction
+    if (n === true) {
+      this.r.f |= 0x40;
+    } else if (n === false) {
+      this.r.f &= ~0x40;
+    }
+
+    // half-carry
+    if (h === true) {
+      this.r.f |= 0x20;
+    } else if (h === false) {
+      this.r.f &= ~0x20;
+    }
+
+    // carry
+    if (c === true) {
+      this.r.f |= 0x10;
+    } else if (c === false) {
+      this.r.f &= ~0x10;
+    }
+  };
+
+  set_instr_clock = (t: number) => {
+    this.r.clock = { t: t, m: Math.floor(t / 4) };
   };
 
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
@@ -249,7 +293,8 @@ class Cpu {
   };
 
   // Stores @reg into the memory location specified by (HL) (LD (HL) B)
-  // TODO: Add STORE_mem_imm, STORE_mem_acc_inc_dec(bool isInc)
+  // For LD (HL) A with inc/dec, use STORE_mem_acc_inc_dec(bool isInc)
+  // TODO: Add STORE_mem_imm
   STORE_mem_reg = (reg: string) => {
     if (byte_regs.indexOf(reg) <= -1) {
       console.error(`STORE_mem_reg::BADREG ${reg}`);
@@ -288,6 +333,21 @@ class Cpu {
 
     this.r.clock.m = 2;
     this.r.clock.t = 8;
+  };
+
+  // Bitwise XORs the register @r with A, then stores result back into A
+  // TODO: Implement XOR_mem (HL) and XOR_imm (d8)
+  XOR_reg = (reg: string) => {
+    if (byte_regs.indexOf(reg) <= -1) {
+      console.log(`XOR_reg::BADREG ${reg}`);
+    }
+    this.r.a ^= this.r[reg];
+    const flags: FlagOptions = { z: false, n: false, h: false, c: false };
+    if (this.r.a === 0x00) {
+      flags.z = true;
+    }
+    this.set_flags(flags);
+    this.set_instr_clock(4);
   };
 
   // Reset the CPU (used on startup)
@@ -418,6 +478,17 @@ class Cpu {
     instrs[0x7d] = this.LD_reg.bind(this, "a", "l");
     instrs[0x7e] = this.LD_byte_mem.bind(this, "a", "hl");
     instrs[0x7f] = this.LD_reg.bind(this, "a", "a");
+
+    // XOR
+    instrs[0xa8] = this.XOR_reg.bind(this, "b");
+    instrs[0xa9] = this.XOR_reg.bind(this, "c");
+    instrs[0xaa] = this.XOR_reg.bind(this, "d");
+    instrs[0xab] = this.XOR_reg.bind(this, "e");
+    instrs[0xac] = this.XOR_reg.bind(this, "h");
+    instrs[0xad] = this.XOR_reg.bind(this, "l");
+    // XOR (HL)
+    instrs[0xaf] = this.XOR_reg.bind(this, "a");
+
     return instrs;
   };
 
