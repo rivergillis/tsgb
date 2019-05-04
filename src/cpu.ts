@@ -1,3 +1,11 @@
+var LOG = (s?: any) => {
+  console.log(s);
+};
+
+var ERR = (s?: any) => {
+  console.error(s);
+};
+
 interface Clock {
   m: number;
   t: number;
@@ -141,7 +149,7 @@ class Cpu {
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
     if (add_byte_regs.indexOf(reg) <= -1) {
-      console.error(`ADD_byte::BADREG ${reg}`);
+      ERR(`ADD_byte::BADREG ${reg}`);
       return;
     }
 
@@ -177,7 +185,7 @@ class Cpu {
   // Compare B to A, setting flags (CP A, B)
   CP_reg = (reg: string) => {
     if (compare_reg_regs.indexOf(reg) <= -1) {
-      console.error(`CP_reg::BADREG ${reg}`);
+      ERR(`CP_reg::BADREG ${reg}`);
       return;
     }
 
@@ -214,7 +222,7 @@ class Cpu {
   // Push registers @regs[0] and @regs[1] (a word) to the stack (PUSH NN)
   PUSH = (regs: string) => {
     if (push_pop_regs.indexOf(regs) <= -1) {
-      console.error(`PUSH::BADREG ${regs}`);
+      ERR(`PUSH::BADREG ${regs}`);
       return;
     }
     // TODO: Use ww?
@@ -231,7 +239,7 @@ class Cpu {
   // Pop registers @regs[0] and @regs[1] (a word) off the stack (POP NN)
   POP = (regs: string) => {
     if (push_pop_regs.indexOf(regs) <= -1) {
-      console.error(`POP::BADREG ${regs}`);
+      ERR(`POP::BADREG ${regs}`);
       return;
     }
     this.r[regs[1]] = this.mmu.rb(this.r.sp, this.r.pc, this.gpu); // read reg1 at the stack pointer
@@ -246,7 +254,7 @@ class Cpu {
   // Read an immediate word into @regs (LD NN, d16)
   LD_word_imm = (regs: string) => {
     if (imm_word_ld_regs.indexOf(regs) <= -1) {
-      console.error(`LD_word_imm::BADREG ${regs}`);
+      ERR(`LD_word_imm::BADREG ${regs}`);
       return;
     }
     const imm: number = this.mmu.rw(this.r.pc, this.r.pc, this.gpu); // get imm from instr
@@ -269,7 +277,7 @@ class Cpu {
   // TODO: support HL (Ld_mem_imm) (LD (HL) d8)
   LD_byte_imm = (reg: string) => {
     if (imm_byte_ld_regs.indexOf(reg) <= -1) {
-      console.error(`LD_byte_imm::BADREG ${reg}`);
+      ERR(`LD_byte_imm::BADREG ${reg}`);
     }
     const imm: number = this.mmu.rb(this.r.pc, this.r.pc, this.gpu);
     this.r.pc += 1; // increment PC past the immediate
@@ -284,7 +292,7 @@ class Cpu {
   // Mem equiv would be Ld_mem_reg (LD (HL) C)
   LD_reg = (r1: string, r2: string) => {
     if (ld_reg_regs.indexOf(r1) <= -1 || ld_reg_regs.indexOf(r2) <= -1) {
-      console.error(`LD_reg::BADREG ${r1}, ${r2}`);
+      ERR(`LD_reg::BADREG ${r1}, ${r2}`);
     }
     this.r[r1] = this.r[r2];
 
@@ -297,7 +305,7 @@ class Cpu {
   // TODO: Add STORE_mem_imm
   STORE_mem_reg = (reg: string) => {
     if (byte_regs.indexOf(reg) <= -1) {
-      console.error(`STORE_mem_reg::BADREG ${reg}`);
+      ERR(`STORE_mem_reg::BADREG ${reg}`);
     }
     // H stores the high-byte, L stores the low-byte
     const highByte = this.r.h << 8;
@@ -322,7 +330,7 @@ class Cpu {
       word_regs.indexOf(r2s) <= -1 ||
       (r1 !== "a" && r2s !== "h")
     ) {
-      console.error(`LD_byte_mem::BADREG ${r1}, (${r2s})`);
+      ERR(`LD_byte_mem::BADREG ${r1}, (${r2s})`);
     }
     // In BC, B contains the high byte and C contains the low byte (big endian?)
     const highByte: number = this.r[r2s[0]] << 8;
@@ -339,7 +347,7 @@ class Cpu {
   // TODO: Implement XOR_mem (HL) and XOR_imm (d8)
   XOR_reg = (reg: string) => {
     if (byte_regs.indexOf(reg) <= -1) {
-      console.log(`XOR_reg::BADREG ${reg}`);
+      LOG(`XOR_reg::BADREG ${reg}`);
     }
     this.r.a ^= this.r[reg];
     const flags: FlagOptions = { z: false, n: false, h: false, c: false };
@@ -373,7 +381,7 @@ class Cpu {
   };
 
   unimplementedFunc = (idx: number) => {
-    console.error(`CPU::Unimplemented function ${idx.toString(16)}`);
+    ERR(`CPU::Unimplemented function ${idx.toString(16)}`);
   };
 
   // TODO: Implement XOR and figure out the updateTile bug

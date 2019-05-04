@@ -1,3 +1,11 @@
+var LOG = (s?: any) => {
+  console.log(s);
+};
+
+var ERR = (s?: any) => {
+  console.error(s);
+};
+
 class Mmu {
   // 256-byte bios encompasses 0x0000 to 0x00FF when inbios=true
   // prettier-ignore
@@ -28,7 +36,7 @@ class Mmu {
   zram: number[] = []; // working ram
 
   reset = () => {
-    // console.log('mmu reset');
+    // LOG('mmu reset');
     for (let i = 0; i < 8192; i++) {
       this.wram[i] = 0x00;
     }
@@ -235,7 +243,7 @@ class Mmu {
         }
         break;
       default:
-        console.error("Bad write in in mmu#wb");
+        ERR("Bad write in in mmu#wb");
     }
   };
   // Write 16-bit word @val to @addr
@@ -246,7 +254,7 @@ class Mmu {
   };
 
   loadRom = (data: Uint8Array) => {
-    console.log("load rom");
+    LOG("load rom");
 
     // First clear the rom
     this.rom = [];
@@ -254,7 +262,7 @@ class Mmu {
     data.forEach(val => {
       this.rom.push(val);
     });
-    console.log(this.rom);
+    LOG(this.rom);
   };
 }
 
@@ -264,9 +272,7 @@ if (typeof window !== "undefined") {
     (window as any).GbComponents = {};
   }
   if ((window as any).GbComponents.cpu === undefined) {
-    console.error(
-      "Incorrect load order, MMU.js must load after CPU.js is loaded!"
-    );
+    ERR("Incorrect load order, MMU.js must load after CPU.js is loaded!");
     (window as any).GbComponents.mmu = new Mmu();
   } else {
     // Attach ourselves to the CPU component

@@ -1,3 +1,11 @@
+var LOG = (s?: any) => {
+  console.log(s);
+};
+
+var ERR = (s?: any) => {
+  console.error(s);
+};
+
 // TODO: Change mode to be stringly typed or enum
 class Gpu {
   ctx: CanvasRenderingContext2D = {} as CanvasRenderingContext2D;
@@ -53,6 +61,10 @@ class Gpu {
       }
     }
 
+    for (let i = 0; i < 4; i++) {
+      this.pal[i] = [0, 0, 0, 0];
+    }
+
     // We're done if running tests on node
     if (typeof document === "undefined") {
       return;
@@ -71,7 +83,7 @@ class Gpu {
           this.frameBuffer = this.ctx.getImageData(0, 0, 160, 144);
         } else {
           // this.frameBuffer = {'width': 160, 'height': 144, 'data': new Array(160 * 144 * 4)};
-          console.error("Could not initialize frameBuffer from canvas!");
+          ERR("Could not initialize frameBuffer from canvas!");
         }
         // Init the canvas to white, then draw it once
         for (let i = 0; i < 160 * 144 * 4; i++) {
@@ -93,7 +105,7 @@ class Gpu {
           // Enter scanline mode 3 (vram), this mode is done
           this.modeclock = 0;
           this.mode = 3;
-          console.log("enter vram");
+          LOG("enter vram");
         }
         break;
       // VRAM read mode, scanline is active
@@ -103,7 +115,7 @@ class Gpu {
           // Scanline ends, enter hblank mode
           this.modeclock = 0;
           this.mode = 0;
-          console.log("hblank vram, render line");
+          LOG("hblank (vram done), render line");
           // Write a scanline to the framebuffer since we just finished it
           this.renderScanline();
         }
@@ -117,13 +129,13 @@ class Gpu {
           if (this.line === 143) {
             // Enter vblank mode since we hit the last line, and write the framebuffer
             this.mode = 1;
-            console.log("screen done, draw and enter vblank");
+            LOG("screen done, draw and enter vblank");
             if (this.ctx.putImageData) {
               this.ctx.putImageData(this.frameBuffer, 0, 0);
             }
           } else {
             // Otherwise go back to OAM read mode for the start of the line
-            console.log("line done, enter oam");
+            LOG("line done, enter oam");
             this.mode = 2;
           }
         }
@@ -138,7 +150,7 @@ class Gpu {
           // 10 lines beyond the last line, is this the best way to do this?
           // TODO: Also, should this be >= 153?
           if (this.line > 153) {
-            console.log("vblank done, enter oam");
+            LOG("vblank done, enter oam");
             // Restart scanning modes, go to OAM read
             this.mode = 2;
             this.line = 0;
@@ -172,6 +184,8 @@ class Gpu {
       tile += 256;
     }
 
+    // LOG(`tile index is ${tile}, y is ${y}, x is ${x}`);
+
     for (let i = 0; i < 160; i++) {
       // Re-map the tile pixel thru the palette
       color = this.pal[this.tileset[tile][y][x]];
@@ -198,14 +212,14 @@ class Gpu {
   // Takes a value written to VRAM and udpates the internal tile data set
   // TODO: understand this function
   updateTile = (addr: number) => {
-    console.log(`updating tile at addr ${addr.toString(16)}`);
+    LOG(`updating tile at addr ${addr.toString(16)}`);
     // Get the "base address" for this tile row
     addr &= 0x1ffe;
     // Figure out which tile and row was updated
     const tile = (addr >> 4) & 511;
     const y = (addr >> 1) & 7;
 
-    console.log(`tile ${tile.toString(16)} and row(y) ${y.toString(16)}`);
+    LOG(`tile ${tile.toString(16)} and row(y) ${y.toString(16)}`);
 
     let sx = 0;
     for (let x = 0; x < 8; x++) {
@@ -215,7 +229,7 @@ class Gpu {
       this.tileset[tile][y][x] =
         (this.vram[addr] & sx ? 1 : 0) + (this.vram[addr + 1] & sx ? 2 : 0);
     }
-    console.log(this.tileset[y]);
+    LOG(this.tileset[y]);
   };
 
   rb = (addr: number): number => {
@@ -235,7 +249,7 @@ class Gpu {
       case 0xff44:
         return this.line;
       default:
-        console.error("Unimplemented in gb#rb");
+        ERR("Unimplemented in gb#rb");
         return 0;
     }
   };
@@ -266,12 +280,12 @@ class Gpu {
             case 2: this.pal[i] = [ 96,  96,  96,  96]; break;
             case 3: this.pal[i] = [  0,   0,   0,   0]; break;
             default:
-              console.error("Bad bgpal in gpu#wb");
+              ERR("Bad bgpal in gpu#wb");
           }
         }
         break;
       default:
-        console.error("Unimplemented in gbpu#wb");
+        ERR("Unimplemented in gbpu#wb");
     }
   };
 }
@@ -282,9 +296,7 @@ if (typeof window !== "undefined") {
     (window as any).GbComponents = {};
   }
   if ((window as any).GbComponents.cpu === undefined) {
-    console.error(
-      "Incorrect load order, GPU.js must load after CPU.js is loaded!"
-    );
+    ERR("Incorrect load order, GPU.js must load after CPU.js is loaded!");
     (window as any).GbComponents.gpu = new Gpu();
   } else {
     // Attach ourselves to the CPU component
