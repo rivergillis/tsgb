@@ -283,6 +283,7 @@ class Cpu {
     LOGI(`LD ${regs}, ${imm.toString(16)}`);
 
     this.r.pc += 2; // advance PC twice bc 3-byte instr
+    this.r.pc &= 0xffff;
     if (regs == "sp") {
       // If we're storing the 16-byte imm in the 16-byte stack pointer, do that
       this.r.sp = imm;
@@ -307,6 +308,8 @@ class Cpu {
     LOGI(`LD ${reg}, ${imm.toString(16)}`);
 
     this.r.pc += 1; // increment PC past the immediate
+    this.r.pc &= 0xffff;
+
     this.r[reg] = imm;
 
     this.r.clock.m = 2;
@@ -318,6 +321,7 @@ class Cpu {
   STORE_hl_imm = () => {
     const imm: number = this.mmu.rb(this.r.pc, this.r.pc, this.gpu);
     this.r.pc += 1; // increment PC past the immediate (Does this need to go after the wb?)
+    this.r.pc &= 0xffff;
 
     LOGI(`LD (HL), ${imm.toString(16)} (STORE_hl_imm)`);
 
@@ -471,7 +475,7 @@ class Cpu {
   // TODO: Implement XOR and figure out the updateTile bug
   buildInstructionMap = (): Function[] => {
     const instrs: Function[] = [];
-    for (let i = 0x00; i <= 0xff; i++) {
+    for (let i = 0x00; i <= 0xcbff; i++) {
       instrs.push(this.unimplementedFunc.bind(this, i));
     }
     instrs[0x00] = this.NOP.bind(this);
@@ -585,6 +589,8 @@ class Cpu {
     instrs[0xaf] = this.XOR_reg.bind(this, "a");
 
     instrs[0xee] = this.XOR_imm.bind(this);
+
+    // CB Prefix instructions...
 
     return instrs;
   };

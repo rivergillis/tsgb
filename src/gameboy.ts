@@ -53,20 +53,31 @@
     let num_instrs = 0;
     do {
       LOGV(cpu.r);
-      const addr = mmu.rb(cpu.r.pc, cpu.r.pc, gpu);
-      if (addr === undefined) {
-        ERR(`UNDEFINED INSTR AT PC ${cpu.r.pc}`);
-      } else {
-        LOGV(`PC(${cpu.r.pc.toString(16)}) Executing ${addr.toString(16)}`);
-      }
-
-      // Fetch and decode the instruction
-      const instr: Function =
-        cpu.instructionMap[mmu.rb(cpu.r.pc, cpu.r.pc, gpu)];
-
+      let addr = mmu.rb(cpu.r.pc, cpu.r.pc, gpu);
       // move past the 1-byte opcode
       cpu.r.pc++;
       cpu.r.pc &= 65535;
+
+      // If the addr we pulled was a CB prefix, we need to pull another byte to get the second half
+      if (addr === 0xcb) {
+        // shift the old byte to be the high byte and add the next byte as the low byte
+        addr = addr << 8;
+        addr += mmu.rb(cpu.r.pc, cpu.r.pc, gpu);
+        // Gotta move the PC again since this was an extra byte
+        cpu.r.pc++;
+        cpu.r.pc &= 65535;
+      }
+
+      if (addr === undefined) {
+        ERR(`UNDEFINED INSTR AT PC ${cpu.r.pc - 1}`);
+      } else {
+        LOGI(
+          `PC(${(cpu.r.pc - 1).toString(16)}) Executing ${addr.toString(16)}`
+        );
+      }
+
+      // Fetch and decode the instruction
+      const instr: Function = cpu.instructionMap[addr];
 
       // Execute the instruction
       instr();
