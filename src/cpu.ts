@@ -524,6 +524,14 @@ class Cpu {
     }
   };
 
+  // Jump to address contained in HL
+  JP_hl = () => {
+    LOGI(`JP HL`);
+    const addr = this.word_from_regs("hl");
+    this.r.pc = addr;
+    this.set_instr_clock(4);
+  };
+
   //// CB PREFIX INSTRUCTIONS
 
   // Test if bit at @bit_idx in register @reg is 0, sets Z flag if it is. (BIT 3 C)
@@ -709,6 +717,7 @@ class Cpu {
     instrs[0xd2] = this.JP_imm_cond.bind(this, "nc");
     instrs[0xda] = this.JP_imm_cond.bind(this, "c");
 
+    instrs[0xe9] = this.JP_hl.bind(this);
     instrs[0xee] = this.XOR_imm.bind(this);
 
     //// CB Prefix instructions
