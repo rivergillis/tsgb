@@ -41,6 +41,13 @@ interface FlagOptions {
   c?: boolean;
 }
 
+interface FlagResults {
+  z: boolean;
+  n: boolean;
+  h: boolean;
+  c: boolean;
+}
+
 /* I think:
 PC should increas by 4 for each instr (maybe not all?)
 SP inc/dec reversed, and also not just by 1?
@@ -145,6 +152,51 @@ class Cpu {
       this.r.f |= 0x10;
     } else if (c === false) {
       this.r.f &= ~0x10;
+    }
+  };
+
+  get_flags = (): FlagResults => {
+    const flags: FlagResults = { z: false, n: false, h: false, c: false };
+    // Z flag is bit 8
+    let mask: number = 1 << 7;
+    if ((this.r.f & mask) === mask) {
+      flags.z = true;
+    }
+
+    // N flag is bit 7
+    mask = 1 << 6;
+    if ((this.r.f & mask) === mask) {
+      flags.n = true;
+    }
+
+    // H flag is bit 6
+    mask = 1 << 5;
+    if ((this.r.f & mask) === mask) {
+      flags.n = true;
+    }
+
+    // C flag is bit 5
+    mask = 1 << 4;
+    if ((this.r.f & mask) === mask) {
+      flags.n = true;
+    }
+    return flags;
+  };
+
+  // Returns true if the condition @condition is true based on the current flags
+  eval_condition = (condition: string): boolean => {
+    const flags = this.get_flags();
+    if (condition === "z") {
+      return flags.z;
+    } else if (condition === "nz") {
+      return !flags.z;
+    } else if (condition === "nc") {
+      return !flags.c;
+    } else if (condition === "c") {
+      return flags.c;
+    } else {
+      ERR(`Bad condition ${condition}`);
+      return false;
     }
   };
 
@@ -446,6 +498,32 @@ class Cpu {
     this.set_instr_clock(8);
   };
 
+  // Absolute jump to immediate word (JP a16)
+  JP_imm = () => {
+    const imm = this.mmu.rw(this.r.pc, this.r.pc, this.gpu);
+    LOGI(`JP ${imm} (JP_imm)`);
+    // Set the PC. I don't think we need to manage overflow here.
+    this.r.pc = imm;
+    this.set_instr_clock(16);
+  };
+
+  // Absolute jump to immediate word if condition passes (JP NZ, a16)
+  JP_imm_cond = (condition: string) => {
+    // We need to read no matter what
+    const imm = this.mmu.rw(this.r.pc, this.r.pc, this.gpu);
+
+    LOGI(`JP ${condition} ${imm} (JP_imm_cond)`);
+    if (this.eval_condition(condition)) {
+      this.r.pc = imm;
+      this.set_instr_clock(16);
+    } else {
+      // We need to inc the PC since we don't jump
+      this.r.pc += 2;
+      this.r.pc &= 0xffff;
+      this.set_instr_clock(12);
+    }
+  };
+
   //// CB PREFIX INSTRUCTIONS
 
   // Test if bit at @bit_idx in register @reg is 0, sets Z flag if it is. (BIT 3 C)
@@ -625,9 +703,15 @@ class Cpu {
     instrs[0xae] = this.XOR_mem.bind(this);
     instrs[0xaf] = this.XOR_reg.bind(this, "a");
 
+    instrs[0xc2] = this.JP_imm_cond.bind(this, "nz");
+    instrs[0xc3] = this.JP_imm.bind(this);
+    instrs[0xca] = this.JP_imm_cond.bind(this, "z");
+    instrs[0xd2] = this.JP_imm_cond.bind(this, "nc");
+    instrs[0xda] = this.JP_imm_cond.bind(this, "c");
+
     instrs[0xee] = this.XOR_imm.bind(this);
 
-    // CB Prefix instructions...
+    //// CB Prefix instructions
 
     // Instrs 0xcb40 to 0xcb80 are BIT
     let current_bit: number = 0;
@@ -649,27 +733,6 @@ class Cpu {
 
   instructionMap: Function[] = this.buildInstructionMap();
 }
-
-// dispatcher process:
-// while(true)
-// {
-//     var op = MMU.rb(Z80._r.pc++);              // Fetch instruction
-//     Z80._map[op]();                            // Dispatch
-//     Z80._r.pc &= 65535;                        // Mask PC to 16 bits
-//     Z80._clock.m += Z80._r.m;                  // Add time to CPU clock
-//     Z80._clock.t += Z80._r.t;
-//
-//     GPU.step(this.r.clock.t);  // tick the GPU
-// }
-
-// Z80._map = [
-//     Z80._ops.NOP,
-//     Z80._ops.LDBCnn,
-//     Z80._ops.LDBCmA,
-//     Z80._ops.INCBC,
-//     Z80._ops.INCr_b,
-//     ...
-// ];
 
 // If we're running in the browser, add this component to the window
 if (typeof window !== "undefined") {

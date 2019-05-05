@@ -89,8 +89,8 @@
 
       // Update the PPU
       gpu.step(cpu.clock.t);
-      // LOG(fclk - cpu.clock.t);
-    } while (cpu.clock.t < fclk / 250); // just execute a little bit for now
+    } while (num_instrs < 50); // just execute a little bit for now
+    // while (cpu.clock.t < fclk)
     const t1 = performance.now();
     LOG(`took ${t1 - t0}ms to execute ${num_instrs} instructions`);
   };
