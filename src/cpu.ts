@@ -213,6 +213,19 @@ class Cpu {
     return highByte + lowByte;
   };
 
+  // TODO: Move this to helper file
+  // Interprets a signed 8-bit value, returns that number as a javascript number.
+  // NOTE: This assume 2's complement
+  interp_signed_byte = (sb: number): number => {
+    // NOTE: jsgb does if(i>127) i=-((~i+1)&255);
+    const mask = 0x80;
+    // If the MSB is set, subtract 256 from the value and return it
+    if ((sb & mask) > 0) {
+      return sb - 0x100;
+    }
+    return sb;
+  };
+
   // Adds @reg to A, leaving the result in A (ADD A, @reg)
   ADD_byte = (reg: string) => {
     if (add_byte_regs.indexOf(reg) <= -1) {
@@ -532,6 +545,37 @@ class Cpu {
     this.set_instr_clock(4);
   };
 
+  // Relative jump, adds signed byte to current PC (JR r8)
+  JR = () => {
+    const rel_imm = this.interp_signed_byte(
+      this.mmu.rb(this.r.pc, this.r.pc, this.gpu)
+    );
+    LOGI(`JR ${rel_imm}`);
+    this.r.pc++; // inc past the byte in the instr
+    // Then add the relative immediate to the pc
+    this.r.pc += rel_imm;
+    this.r.pc &= 0xffff;
+    this.set_instr_clock(12);
+  };
+
+  // Relative conditional jump, adds signed byte to current PC (JR cc, r8)
+  JR_cond = (condition: string) => {
+    const rel_imm = this.interp_signed_byte(
+      this.mmu.rb(this.r.pc, this.r.pc, this.gpu)
+    );
+    LOGI(`JR ${condition}, ${rel_imm} (JR_cond)`);
+    this.r.pc++;
+
+    if (this.eval_condition(condition)) {
+      this.r.pc += rel_imm;
+      this.r.pc &= 0xffff;
+      this.set_instr_clock(12);
+    } else {
+      // Already incremented PC
+      this.set_instr_clock(8);
+    }
+  };
+
   //// CB PREFIX INSTRUCTIONS
 
   // Test if bit at @bit_idx in register @reg is 0, sets Z flag if it is. (BIT 3 C)
@@ -608,17 +652,22 @@ class Cpu {
     instrs[0x0e] = this.LD_byte_imm.bind(this, "c");
     instrs[0x11] = this.LD_word_imm.bind(this, "de");
     instrs[0x16] = this.LD_byte_imm.bind(this, "d");
+    instrs[0x18] = this.JR.bind(this);
     instrs[0x1a] = this.LD_byte_mem.bind(this, "a", "de");
     instrs[0x1e] = this.LD_byte_imm.bind(this, "e");
+    instrs[0x20] = this.JR_cond.bind(this, "nz");
     instrs[0x21] = this.LD_word_imm.bind(this, "hl");
     instrs[0x22] = this.STORE_mem_acc_inc_dec.bind(this, true);
     instrs[0x26] = this.LD_byte_imm.bind(this, "h");
+    instrs[0x28] = this.JR_cond.bind(this, "z");
     instrs[0x2a] = this.LD_acc_hl_inc_dec.bind(this, true);
     instrs[0x2e] = this.LD_byte_imm.bind(this, "l");
+    instrs[0x30] = this.JR_cond.bind(this, "nc");
     instrs[0x31] = this.LD_word_imm.bind(this, "sp");
     instrs[0x32] = this.STORE_mem_acc_inc_dec.bind(this, false);
     instrs[0x3a] = this.LD_acc_hl_inc_dec.bind(this, false);
     instrs[0x36] = this.STORE_hl_imm.bind(this);
+    instrs[0x38] = this.JR_cond.bind(this, "c");
     instrs[0x3e] = this.LD_byte_imm.bind(this, "a");
 
     // LD B, r2
