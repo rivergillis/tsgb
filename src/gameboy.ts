@@ -3,13 +3,13 @@
     console.log(s);
   };
   var ERR = (s?: any) => {
-    console.error(s);
+    // console.error(s);
   };
   var LOGI = (s?: any) => {
-    console.info(s);
+    // console.info(s);
   };
   var LOGV = (s?: any) => {
-    console.debug(s);
+    // console.debug(s);
   };
 
   if (typeof window === "undefined") {
@@ -57,6 +57,10 @@
       // move past the 1-byte opcode
       cpu.r.pc++;
       cpu.r.pc &= 65535;
+
+      if (cpu.r.pc >= 0x100) {
+        LOGI(cpu.r.pc.toString(16));
+      }
 
       // If the addr we pulled was a CB prefix, we need to pull another byte to get the second half
       if (addr === 0xcb) {

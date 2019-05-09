@@ -1,14 +1,14 @@
 var LOG = (s?: any) => {
-  console.log(s);
+  // console.log(s);
 };
 var ERR = (s?: any) => {
-  console.error(s);
+  // console.error(s);
 };
 var LOGI = (s?: any) => {
-  console.info(s);
+  // console.info(s);
 };
 var LOGV = (s?: any) => {
-  console.debug(s);
+  // console.debug(s);
 };
 
 interface Clock {
